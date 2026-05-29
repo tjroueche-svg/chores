@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <meta name="theme-color" content="#6C63FF"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Chore Time"/>
+  <title>🌀 Chore Time!</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-tap-highlight-color:transparent}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:linear-gradient(145deg,#6C63FF 0%,#3ECFCF 100%);
+  min-height:100vh;min-height:100dvh;
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:16px 12px 40px;overflow-x:hidden;
+}
+.card{
+  background:#fff;border-radius:28px;
+  padding:24px 20px 28px;
+  width:100%;max-width:440px;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);
+  position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;
+  width:200px;height:200px;
+  background:radial-gradient(circle,#FFE06640,transparent 70%);
+  top:-60px;right:-60px;border-radius:50%;pointer-events:none;
+}
+
+/* ── Typography ── */
+h1{font-size:1.9rem;font-weight:900;color:#6C63FF;text-align:center;line-height:1.1}
+.subtitle{text-align:center;color:#999;font-size:.88rem;margin-top:4px}
+h2{font-size:1.15rem;font-weight:800;color:#333}
+.section-label{
+  font-size:.72rem;font-weight:800;color:#bbb;
+  text-transform:uppercase;letter-spacing:1px;margin:18px 0 8px;
+}
+
+/* ── Screens ── */
+.screen{display:none}.screen.active{display:block}
+
+/* ── Date badge ── */
+.date-badge{
+  display:block;text-align:center;
+  background:#f0f0ff;color:#6C63FF;
+  font-size:.8rem;font-weight:700;
+  padding:5px 14px;border-radius:99px;
+  margin-bottom:16px;width:fit-content;margin-inline:auto;
+}
+
+/* ── Kid grid ── */
+.kid-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.kid-btn{
+  background:linear-gradient(135deg,#6C63FF,#3ECFCF);
+  color:#fff;border:none;border-radius:20px;
+  padding:20px 10px;font-size:1rem;font-weight:800;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;
+  box-shadow:0 6px 18px rgba(108,99,255,.3);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.kid-btn:active{transform:scale(.95);box-shadow:none}
+.kid-btn .av{font-size:2.2rem;line-height:1}
+.kid-btn .done-tag{font-size:.68rem;background:rgba(255,255,255,.25);border-radius:99px;padding:2px 8px}
+.kid-btn.bonus-kid{box-shadow:0 6px 20px rgba(255,193,7,.5);outline:3px solid #FFD700}
+
+/* ── Header row ── */
+.hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.back-btn{
+  background:#f0f0ff;border:none;border-radius:12px;
+  width:40px;height:40px;font-size:1.2rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.back-btn:active{background:#ddddf8}
+
+/* ── Reveal box ── */
+.reveal-box{
+  background:linear-gradient(135deg,#f8f7ff,#f0fefe);
+  border:3px solid #e0dcff;border-radius:20px;
+  padding:18px 16px;margin-bottom:16px;
+  min-height:110px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;text-align:center;
+}
+.slot-emoji{font-size:2.8rem;line-height:1;display:block}
+.slot-text{font-size:1rem;font-weight:800;color:#333;margin-top:8px;min-height:1.6em;line-height:1.3}
+
+/* Chore list inside reveal */
+.chore-list-reveal{width:100%;text-align:left;margin-top:8px;display:none}
+.chore-list-reveal li{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 11px;border-radius:12px;
+  background:#fff;margin-bottom:6px;
+  font-size:.93rem;font-weight:600;color:#333;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);list-style:none;
+}
+.chore-list-reveal li .c-emoji{font-size:1.25rem;flex-shrink:0}
+.chore-list-reveal li.bonus-chore-item{background:#fffbea;border:1.5px solid #FFD700}
+
+/* Bonus badge */
+.bonus-badge{
+  display:none;
+  background:linear-gradient(135deg,#FFD700,#FF8C00);
+  color:#fff;font-size:.75rem;font-weight:800;
+  padding:3px 10px;border-radius:99px;margin-top:6px;letter-spacing:.5px;
+}
+
+/* Shimmer + animations */
+.shimmer{
+  position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);
+  background-size:200% 100%;
+  animation:shimmer-move .6s infinite linear;
+  pointer-events:none;opacity:0;transition:opacity .2s;
+}
+.reveal-box.is-spinning .shimmer{opacity:1}
+@keyframes shimmer-move{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes spin-flash{
+  0%{opacity:1;transform:translateY(0)}50%{opacity:.3;transform:translateY(-8px)}100%{opacity:1;transform:translateY(0)}
+}
+.slot-emoji.spinning{animation:spin-flash .13s infinite}
+@keyframes bounce-in{
+  0%{transform:scale(.5);opacity:0}60%{transform:scale(1.12);opacity:1}80%{transform:scale(.96)}100%{transform:scale(1)}
+}
+.slot-emoji.result{animation:bounce-in .5s cubic-bezier(.36,.07,.19,.97) forwards}
+@keyframes confetti-fall{
+  0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(90px) rotate(360deg);opacity:0}
+}
+.confetti-piece{
+  position:absolute;width:8px;height:8px;border-radius:2px;
+  animation:confetti-fall .8s ease-out forwards;pointer-events:none;
+}
+
+/* ── Buttons ── */
+.btn{
+  display:block;width:100%;border:none;border-radius:18px;
+  padding:16px;font-size:1rem;font-weight:800;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;
+}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,#6C63FF,#3ECFCF);color:#fff;box-shadow:0 8px 24px rgba(108,99,255,.3)}
+.btn-primary:disabled{background:#ccc;box-shadow:none;cursor:default;opacity:.7}
+.btn-secondary{background:#f0f0ff;color:#6C63FF;margin-top:10px}
+.btn-danger{background:#fff0f0;color:#e05555;margin-top:10px;font-size:.88rem;padding:12px}
+.btn-sm{padding:9px 14px;font-size:.82rem;width:auto;border-radius:12px}
+
+/* ── Dashboard ── */
+.dash-list{list-style:none;display:flex;flex-direction:column;gap:7px}
+.dash-item{
+  display:flex;align-items:flex-start;gap:9px;
+  background:#f8f7ff;border-radius:14px;padding:10px 12px;
+}
+.dash-item .kid-lbl{font-weight:800;color:#6C63FF;font-size:.82rem;min-width:56px;flex-shrink:0;padding-top:1px}
+.dash-item .chore-lbl{color:#555;font-size:.8rem;flex:1;line-height:1.5}
+.dash-item .av-sm{font-size:1rem;flex-shrink:0;padding-top:1px}
+.dash-item.is-bonus{background:#fffbea;border:1.5px solid #FFD700}
+.no-dash{color:#bbb;font-size:.82rem;text-align:center;padding:10px 0}
+
+/* ── Parent panel ── */
+.pin-wrap{display:flex;gap:8px;margin-top:16px;justify-content:center}
+.pin-input{
+  width:58px;height:58px;border:2px solid #e0dcff;border-radius:14px;
+  font-size:1.4rem;text-align:center;font-weight:800;color:#6C63FF;
+  -webkit-appearance:none;outline:none;
+}
+.pin-input:focus{border-color:#6C63FF}
+.tab-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab-btn{
+  background:#f0f0ff;color:#6C63FF;border:none;
+  border-radius:10px;padding:8px 13px;font-size:.8rem;font-weight:800;cursor:pointer;
+}
+.tab-btn.active{background:#6C63FF;color:#fff}
+.tab-btn:active{transform:scale(.95)}
+
+/* Chore pill rows */
+.chore-pill-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.chore-pill{
+  flex:1;background:#fff;border:1.5px solid #e0dcff;
+  border-radius:10px;padding:9px 12px;
+  font-size:.86rem;font-weight:600;color:#333;
+  display:flex;align-items:center;gap:8px;
+}
+.chore-pill .p-emoji{font-size:1.1rem}
+.del-btn{
+  background:#fff0f0;border:none;border-radius:10px;
+  width:36px;height:36px;font-size:1rem;color:#e05555;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.del-btn:active{background:#ffd5d5}
+.bonus-pill{
+  flex:1;background:#fffbea;border:1.5px solid #FFD700;
+  border-radius:10px;padding:9px 12px;
+  font-size:.86rem;font-weight:600;color:#333;
+  display:flex;align-items:center;gap:8px;
+}
+.add-row{display:flex;gap:7px;margin-top:8px;align-items:center}
+.add-emoji-input{
+  width:46px;border:1.5px solid #e0dcff;border-radius:10px;
+  font-size:1.1rem;text-align:center;padding:8px 4px;
+}
+.add-text-input{
+  flex:1;border:1.5px solid #e0dcff;border-radius:10px;
+  padding:8px 11px;font-size:.86rem;color:#333;
+}
+.add-emoji-input:focus,.add-text-input:focus,.chance-input:focus,.pin-input-single:focus{border-color:#6C63FF;outline:none}
+.add-chore-btn{
+  background:#6C63FF;color:#fff;border:none;
+  border-radius:10px;width:38px;height:38px;
+  font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.add-chore-btn:active{background:#5550e8}
+
+/* Chance row */
+.chance-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.chance-row label{font-size:.83rem;font-weight:700;color:#555}
+.chance-input{
+  width:68px;border:1.5px solid #e0dcff;border-radius:10px;
+  padding:8px 10px;font-size:.9rem;text-align:center;color:#333;
+}
+
+/* Info callout */
+.info-box{
+  background:#f0f0ff;border-radius:14px;padding:12px 14px;
+  font-size:.82rem;color:#666;line-height:1.5;margin-bottom:14px;
+}
+.info-box strong{color:#6C63FF}
+
+/* PIN single input */
+.pin-input-single{
+  width:110px;border:1.5px solid #e0dcff;border-radius:12px;
+  padding:11px;font-size:1.1rem;text-align:center;color:#333;
+}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:#333;color:#fff;
+  padding:10px 20px;border-radius:99px;
+  font-size:.88rem;font-weight:700;
+  transition:transform .35s cubic-bezier(.36,.07,.19,.97);
+  z-index:9999;white-space:nowrap;pointer-events:none;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+@media(max-width:360px){
+  h1{font-size:1.55rem}
+  .kid-btn{padding:14px 6px;font-size:.88rem}
+}
+</style>
+</head>
+<body>
+<div class="card">
+
+<!-- ══════ WELCOME ══════ -->
+<div class="screen active" id="screen-welcome">
+  <h1>🌀 Chore Time!</h1>
+  <p class="subtitle">Tap your name to see today's chores!</p>
+  <span class="date-badge" id="welcome-date"></span>
+  <div class="kid-grid" id="kid-grid"></div>
+  <p class="section-label">Today's Full Board</p>
+  <ul class="dash-list" id="dash-welcome"></ul>
+  <button class="btn btn-danger" style="margin-top:14px" onclick="resetDay()">🔄 Re-roll Today's Chores</button>
+  <button class="btn btn-secondary" onclick="goParentLogin()">🔐 Parent Settings</button>
+</div>
+
+<!-- ══════ SPIN / REVEAL ══════ -->
+<div class="screen" id="screen-spin">
+  <div class="hdr">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h2 id="spin-kid-title"></h2>
+  </div>
+  <div class="reveal-box" id="reveal-box">
+    <div class="shimmer"></div>
+    <span class="slot-emoji" id="slot-emoji">🎲</span>
+    <div class="slot-text" id="slot-text">Tap the button to reveal!</div>
+    <span class="bonus-badge" id="slot-badge">⭐ BONUS CHORE!</span>
+    <ul class="chore-list-reveal" id="chore-list-reveal"></ul>
+  </div>
+  <button class="btn btn-primary" id="spin-btn" onclick="doReveal()">🎰 Reveal My Chores!</button>
+  <button class="btn btn-secondary" onclick="goBack()">← Back</button>
+  <p class="section-label">Today's Full Board</p>
+  <ul class="dash-list" id="dash-spin"></ul>
+</div>
+
+<!-- ══════ PARENT LOGIN ══════ -->
+<div class="screen" id="screen-pin">
+  <div class="hdr">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h2>Parent Login</h2>
+  </div>
+  <p style="color:#777;font-size:.88rem;margin-top:4px">Enter your 4-digit PIN.</p>
+  <div class="pin-wrap">
+    <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="p0" oninput="pinNext(0)"/>
+    <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="p1" oninput="pinNext(1)"/>
+    <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="p2" oninput="pinNext(2)"/>
+    <input class="pin-input" type="password" inputmode="numeric" maxlength="1" id="p3" oninput="pinNext(3)"/>
+  </div>
+  <button class="btn btn-primary" style="margin-top:20px" onclick="checkPin()">Unlock →</button>
+  <p style="color:#ccc;font-size:.75rem;text-align:center;margin-top:10px">Default PIN: 1234</p>
+</div>
+
+<!-- ══════ PARENT PANEL ══════ -->
+<div class="screen" id="screen-parent">
+  <div class="hdr">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <h2>⚙️ Parent Settings</h2>
+  </div>
+  <div class="tab-bar" id="parent-tabs"></div>
+  <div id="parent-editor"></div>
+</div>
+
+</div><!-- /card -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ─── KEYS ──────────────────────────────────────────────────────────
+const KEY_STATE  = 'choreState2';
+const KEY_CONFIG = 'choreConfig2';
+const KEY_PIN    = 'chorePin';
+
+// ─── DEFAULTS ──────────────────────────────────────────────────────
+
+const DEFAULT_KIDS = [
+  {name:'Carson', avatar:'🎮'},
+  {name:'Benson', avatar:'⛹️'},
+  {name:'Lennox', avatar:'📣'},
+  {name:'Monroe', avatar:'🏀'},
+];
+
+// Master chore pool — parent can edit via settings
+const DEFAULT_CHORES = [
+  {e:'💩', t:'Scoop Poop'},
+  {e:'🛏️', t:'Pick Up Room'},
+  {e:'🪟', t:'Dust Blinds & Furniture'},
+  {e:'🧹', t:'Vacuum Rug & Mop Floor'},
+  {e:'🚿', t:'Clean Bathroom'},
+  {e:'🧽', t:'Wipe Appliances'},
+  {e:'🧹', t:'Clean Mudroom'},
+  {e:'🧹', t:'Dust Living Room'},
+  {e:'🗑️', t:'Bathroom Trash'},
+  {e:'🐕', t:'Bathe Dogs'},
+  {e:'🛁', t:'Change Towels'},
+  {e:'💡', t:'Wipe Lights & Knobs'},
+  {e:'🧻', t:'Restock Toilet Paper'},
+  {e:'🧹', t:'Vacuum Hallway & Stairs'},
+  {e:'🛋️', t:'Vacuum Bonus Room & Straighten Up'},
+  {e:'🍽️', t:'Set & Clear the Table'},
+  {e:'🌿', t:'Water the Plants'},
+];
+
+const DEFAULT_BONUS = [
+  {e:'💵', t:'Earn $5!'},
+  {e:'🎮', t:'Extra Screen Time!'},
+  {e:'🍦', t:'Pick Tonight\'s Dessert!'},
+  {e:'🎬', t:'Choose the Movie Tonight!'},
+  {e:'😴', t:'Free Pass — Skip a Chore Day!'},
+];
+
+const DEFAULT_BONUS_CHANCE = 20; // % chance any given day has a bonus kid
+const CHORES_PER_KID = 3;
+const SPIN_MS = 1700;
+
+// ─── CONFIG ────────────────────────────────────────────────────────
+
+function getConfig() {
+  try {
+    const raw = localStorage.getItem(KEY_CONFIG);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { kids: DEFAULT_KIDS, chores: DEFAULT_CHORES, bonus: DEFAULT_BONUS, bonusChance: DEFAULT_BONUS_CHANCE };
+}
+
+function saveConfig(cfg) {
+  localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg));
+}
+
+// ─── DAILY STATE ───────────────────────────────────────────────────
+// State shape:
+// {
+//   date: 'YYYY-MM-DD',
+//   assignments: { [kidName]: [ {e,t}, {e,t}, {e,t} ] },
+//   bonusKid: kidName | null,     ← which kid gets a bonus today (null = nobody)
+//   bonusChore: {e,t} | null,     ← the bonus chore object
+//   revealed: { [kidName]: bool } ← whether kid has tapped to see theirs
+// }
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+
+/**
+ * Seeded shuffle using a simple mulberry32 PRNG so the same day
+ * always produces the same assignment if needed. But we re-roll on
+ * explicit reset, so we just use Math.random() for freshness.
+ */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateDayState(cfg) {
+  const kids    = cfg.kids;
+  const n       = kids.length;           // 4
+  const needed  = n * CHORES_PER_KID;   // 12
+
+  // Shuffle chore pool; if fewer than needed, cycle the pool
+  let pool = shuffle(cfg.chores);
+  while (pool.length < needed) pool = [...pool, ...shuffle(cfg.chores)];
+  pool = pool.slice(0, needed);
+
+  // Assign CHORES_PER_KID to each kid in order
+  const kidOrder = shuffle([...kids]); // randomise who gets which slice
+  const assignments = {};
+  kidOrder.forEach((kid, i) => {
+    assignments[kid.name] = pool.slice(i * CHORES_PER_KID, (i + 1) * CHORES_PER_KID);
+  });
+
+  // Bonus: roll once for the whole day
+  const hasBonus   = Math.random() * 100 < cfg.bonusChance;
+  const bonusKid   = hasBonus
+    ? kids[Math.floor(Math.random() * kids.length)].name
+    : null;
+  const bonusChore = (hasBonus && cfg.bonus.length)
+    ? cfg.bonus[Math.floor(Math.random() * cfg.bonus.length)]
+    : null;
+
+  // Revealed flags
+  const revealed = {};
+  kids.forEach(k => { revealed[k.name] = false; });
+
+  return { date: todayStr(), assignments, bonusKid, bonusChore, revealed };
+}
+
+function getState() {
+  try {
+    const raw = localStorage.getItem(KEY_STATE);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.date === todayStr()) return s;
+    }
+  } catch {}
+  // New day or no state → generate fresh
+  const cfg   = getConfig();
+  const fresh = generateDayState(cfg);
+  localStorage.setItem(KEY_STATE, JSON.stringify(fresh));
+  return fresh;
+}
+
+function saveState(s) {
+  localStorage.setItem(KEY_STATE, JSON.stringify(s));
+}
+
+// ─── NAV ───────────────────────────────────────────────────────────
+
+let currentKid  = null;
+let activeTab   = null;
+let screenStack = ['screen-welcome'];
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function nav(id) { screenStack.push(id); showScreen(id); }
+function goBack() {
+  screenStack.pop();
+  const prev = screenStack[screenStack.length - 1] || 'screen-welcome';
+  if (prev === 'screen-welcome') renderWelcome();
+  showScreen(prev);
+}
+
+// ─── WELCOME ───────────────────────────────────────────────────────
+
+function renderWelcome() {
+  const cfg   = getConfig();
+  const state = getState();
+  const grid  = document.getElementById('kid-grid');
+
+  // Date label
+  const d = new Date();
+  document.getElementById('welcome-date').textContent =
+    d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+
+  grid.innerHTML = cfg.kids.map(kid => {
+    const done     = state.revealed[kid.name];
+    const isBonus  = state.bonusKid === kid.name;
+    return `<button class="kid-btn ${isBonus ? 'bonus-kid' : ''}"
+                    onclick="selectKid('${kid.name}')">
+      <span class="av">${kid.avatar}</span>
+      ${kid.name}
+      ${done  ? `<span class="done-tag">✅ Seen!</span>` : ''}
+      ${isBonus && !done ? `<span class="done-tag">⭐ Bonus day!</span>` : ''}
+    </button>`;
+  }).join('');
+
+  renderDash('dash-welcome', cfg, state);
+}
+
+// ─── DASHBOARD ─────────────────────────────────────────────────────
+
+function renderDash(elId, cfg, state) {
+  const el = document.getElementById(elId);
+  if (!state.assignments) { el.innerHTML = '<li class="no-dash">Roll chores to get started!</li>'; return; }
+
+  el.innerHTML = cfg.kids.map(kid => {
+    const hasRevealed = state.revealed[kid.name];
+    const chores      = state.assignments[kid.name] || [];
+    const isBonus     = state.bonusKid === kid.name;
+
+    if (!hasRevealed) {
+      // Hide chores until the kid taps their name and reveals
+      return `<li class="dash-item">
+        <span class="av-sm">${kid.avatar}</span>
+        <span class="kid-lbl">${kid.name}</span>
+        <span class="chore-lbl" style="color:#ccc;font-style:italic">🔒 Not revealed yet</span>
+      </li>`;
+    }
+
+    const bonusPart = isBonus && state.bonusChore
+      ? ` <span style="color:#e6a000">· ${state.bonusChore.e} ${state.bonusChore.t} ⭐</span>`
+      : '';
+    const choreText = chores.map(c => `${c.e} ${c.t}`).join(' · ');
+    return `<li class="dash-item ${isBonus ? 'is-bonus' : ''}">
+      <span class="av-sm">${kid.avatar}</span>
+      <span class="kid-lbl">${kid.name}</span>
+      <span class="chore-lbl">${choreText}${bonusPart}</span>
+    </li>`;
+  }).join('');
+}
+
+// ─── SELECT KID ────────────────────────────────────────────────────
+
+function selectKid(name) {
+  const cfg  = getConfig();
+  currentKid = cfg.kids.find(k => k.name === name);
+  renderSpinScreen();
+  nav('screen-spin');
+}
+
+function renderSpinScreen() {
+  const cfg   = getConfig();
+  const state = getState();
+  const slotEmoji = document.getElementById('slot-emoji');
+  const slotText  = document.getElementById('slot-text');
+  const slotBadge = document.getElementById('slot-badge');
+  const choreLst  = document.getElementById('chore-list-reveal');
+  const spinBtn   = document.getElementById('spin-btn');
+
+  document.getElementById('spin-kid-title').textContent =
+    `${currentKid.avatar} ${currentKid.name}'s Chores`;
+
+  if (state.revealed[currentKid.name]) {
+    // Already seen — just show result
+    const chores  = state.assignments[currentKid.name] || [];
+    const isBonus = state.bonusKid === currentKid.name;
+    slotEmoji.textContent = currentKid.avatar;
+    slotEmoji.className   = 'slot-emoji';
+    slotText.textContent  = '';
+    slotBadge.style.display = isBonus ? 'inline-block' : 'none';
+    buildChoreList(chores, isBonus ? state.bonusChore : null);
+    choreLst.style.display = 'block';
+    spinBtn.disabled    = true;
+    spinBtn.textContent = '✅ Already revealed today!';
+  } else {
+    slotEmoji.textContent = '🎲';
+    slotEmoji.className   = 'slot-emoji';
+    slotText.textContent  = 'Tap the button to reveal!';
+    slotBadge.style.display = 'none';
+    choreLst.style.display  = 'none';
+    choreLst.innerHTML      = '';
+    spinBtn.disabled    = false;
+    spinBtn.textContent = '🎰 Reveal My Chores!';
+  }
+
+  renderDash('dash-spin', cfg, state);
+}
+
+function buildChoreList(chores, bonusChore) {
+  const ul = document.getElementById('chore-list-reveal');
+  ul.innerHTML = chores.map(c =>
+    `<li><span class="c-emoji">${c.e}</span>${c.t}</li>`
+  ).join('');
+  if (bonusChore) {
+    ul.innerHTML += `<li class="bonus-chore-item"><span class="c-emoji">${bonusChore.e}</span>${bonusChore.t} — <strong>BONUS! ⭐</strong></li>`;
+  }
+}
+
+// ─── REVEAL ANIMATION ──────────────────────────────────────────────
+
+function doReveal() {
+  const state   = getState();
+  const cfg     = getConfig();
+  if (state.revealed[currentKid.name]) return;
+
+  const chores  = state.assignments[currentKid.name] || [];
+  const isBonus = state.bonusKid === currentKid.name;
+
+  const spinBtn   = document.getElementById('spin-btn');
+  const revealBox = document.getElementById('reveal-box');
+  const slotEmoji = document.getElementById('slot-emoji');
+  const slotText  = document.getElementById('slot-text');
+  const choreLst  = document.getElementById('chore-list-reveal');
+
+  spinBtn.disabled    = true;
+  spinBtn.textContent = '🌀 Spinning…';
+  revealBox.classList.add('is-spinning');
+  choreLst.style.display = 'none';
+
+  const pool = ['🧹','🚿','🛏️','💩','🐕','🧽','🪟','🗑️','💡','🌿','🍽️','🧻','🛋️','🎲','⭐','💵'];
+  let count = 0;
+  const total = Math.floor(SPIN_MS / 130);
+
+  const cycle = setInterval(() => {
+    slotEmoji.className   = 'slot-emoji spinning';
+    slotEmoji.textContent = pool[Math.floor(Math.random() * pool.length)];
+    slotText.textContent  = '…';
+    count++;
+    if (count >= total) {
+      clearInterval(cycle);
+
+      // Mark revealed
+      state.revealed[currentKid.name] = true;
+      saveState(state);
+
+      // Show result
+      revealBox.classList.remove('is-spinning');
+      slotEmoji.className   = 'slot-emoji result';
+      slotEmoji.textContent = currentKid.avatar;
+      slotText.textContent  = '';
+
+      const slotBadge = document.getElementById('slot-badge');
+      slotBadge.style.display = isBonus ? 'inline-block' : 'none';
+
+      buildChoreList(chores, isBonus ? state.bonusChore : null);
+      choreLst.style.display = 'block';
+
+      spawnConfetti(revealBox, isBonus ? 24 : 12);
+      renderDash('dash-spin', cfg, state);
+
+      spinBtn.disabled    = true;
+      spinBtn.textContent = '✅ Chores revealed!';
+
+      showToast(isBonus
+        ? `🌟 Lucky! ${currentKid.name} got a BONUS chore today!`
+        : `🎉 ${currentKid.name}'s chores are set!`, 3000);
+    }
+  }, 130);
+}
+
+// ─── CONFETTI ──────────────────────────────────────────────────────
+
+function spawnConfetti(container, count) {
+  const colors = ['#6C63FF','#3ECFCF','#FFD700','#FF6B6B','#A8E6CF'];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.cssText = `left:${20+Math.random()*60}%;top:${5+Math.random()*30}%;background:${colors[~~(Math.random()*colors.length)]};animation-delay:${Math.random()*.4}s;animation-duration:${.6+Math.random()*.4}s`;
+    container.appendChild(p);
+    p.addEventListener('animationend', ()=>p.remove());
+  }
+}
+
+// ─── RESET ─────────────────────────────────────────────────────────
+
+function resetDay() {
+  if (!confirm('Re-roll all chores for today? This randomises new assignments.')) return;
+  const cfg   = getConfig();
+  const fresh = generateDayState(cfg);
+  saveState(fresh);
+  showToast('🎲 New chores rolled!');
+  renderWelcome();
+}
+
+// ─── PARENT PIN ────────────────────────────────────────────────────
+
+function goParentLogin() {
+  ['p0','p1','p2','p3'].forEach(id => { document.getElementById(id).value = ''; });
+  screenStack = ['screen-welcome','screen-pin'];
+  showScreen('screen-pin');
+  setTimeout(()=>document.getElementById('p0').focus(), 100);
+}
+
+function pinNext(idx) {
+  const val = document.getElementById(`p${idx}`).value;
+  if (val.length === 1 && idx < 3) document.getElementById(`p${idx+1}`).focus();
+  if (idx === 3 && val.length === 1) checkPin();
+}
+
+function checkPin() {
+  const entered = ['p0','p1','p2','p3'].map(id=>document.getElementById(id).value).join('');
+  const stored  = localStorage.getItem(KEY_PIN) || '1234';
+  if (entered === stored) {
+    screenStack.push('screen-parent');
+    renderParentPanel();
+    showScreen('screen-parent');
+  } else {
+    showToast('❌ Wrong PIN');
+    ['p0','p1','p2','p3'].forEach(id=>{ document.getElementById(id).value=''; });
+    document.getElementById('p0').focus();
+  }
+}
+
+// ─── PARENT PANEL ──────────────────────────────────────────────────
+
+function renderParentPanel(tab) {
+  const cfg  = getConfig();
+  const tabs = ['📋 Chore List', '⭐ Bonus', '🔑 PIN'];
+  if (!tab) tab = activeTab || tabs[0];
+  activeTab = tab;
+
+  document.getElementById('parent-tabs').innerHTML = tabs.map(t =>
+    `<button class="tab-btn ${t===tab?'active':''}" onclick="renderParentPanel('${t}')">${t}</button>`
+  ).join('');
+
+  const editor = document.getElementById('parent-editor');
+  if (tab === '📋 Chore List') renderChoreListEditor(editor, cfg);
+  else if (tab === '⭐ Bonus')  renderBonusEditor(editor, cfg);
+  else                          renderPinEditor(editor);
+}
+
+// ── Master chore list editor ──
+function renderChoreListEditor(editor, cfg) {
+  const total   = cfg.chores.length;
+  const kids    = cfg.kids.length;
+  const canMake = Math.floor(total / kids); // chores per kid if divided evenly
+
+  let html = `
+    <div class="info-box">
+      You have <strong>${total} chores</strong> in the pool. With <strong>${kids} kids</strong> getting
+      <strong>${CHORES_PER_KID} chores each</strong>, the app needs at least <strong>${kids * CHORES_PER_KID}</strong>.
+      ${total < kids * CHORES_PER_KID
+        ? `<span style="color:#e05555">⚠️ Add more chores — some will repeat!</span>`
+        : `✅ Pool is large enough.`}
+    </div>
+    <div id="chore-pills">`;
+
+  cfg.chores.forEach((c, i) => {
+    html += `
+      <div class="chore-pill-row">
+        <div class="chore-pill"><span class="p-emoji">${c.e}</span>${c.t}</div>
+        <button class="del-btn" onclick="deleteChore(${i})">✕</button>
+      </div>`;
+  });
+
+  html += `</div>
+    <div class="add-row" style="margin-top:12px">
+      <input class="add-emoji-input" id="new-chore-emoji" placeholder="🧹" maxlength="2"/>
+      <input class="add-text-input"  id="new-chore-text"  placeholder="Add chore to pool…"
+             onkeydown="if(event.key==='Enter')addChore()"/>
+      <button class="add-chore-btn" onclick="addChore()">+</button>
+    </div>
+    <button class="btn btn-danger" style="margin-top:14px" onclick="resetDay()">🎲 Re-roll Today's Assignments</button>`;
+
+  editor.innerHTML = html;
+}
+
+function addChore() {
+  const emojiEl = document.getElementById('new-chore-emoji');
+  const textEl  = document.getElementById('new-chore-text');
+  const emoji   = emojiEl.value.trim() || '✅';
+  const text    = textEl.value.trim();
+  if (!text) { showToast('Enter a chore name!'); return; }
+  const cfg = getConfig();
+  cfg.chores.push({e:emoji, t:text});
+  saveConfig(cfg);
+  emojiEl.value = '';
+  textEl.value  = '';
+  renderParentPanel(activeTab);
+  showToast(`Added: ${text}`);
+}
+
+function deleteChore(i) {
+  if (!confirm('Remove this chore from the pool?')) return;
+  const cfg = getConfig();
+  cfg.chores.splice(i, 1);
+  saveConfig(cfg);
+  renderParentPanel(activeTab);
+  showToast('Chore removed');
+}
+
+// ── Bonus editor ──
+function renderBonusEditor(editor, cfg) {
+  let html = `
+    <div class="chance-row">
+      <label>Chance a kid gets a bonus today:</label>
+      <input class="chance-input" type="number" id="bonus-chance-val"
+             min="0" max="100" value="${cfg.bonusChance}"/>
+      <span style="color:#888;font-size:.82rem">%</span>
+      <button class="btn btn-primary btn-sm" onclick="saveBonusChance()">Save</button>
+    </div>
+    <p class="section-label">Bonus Reward Pool</p>
+    <div id="bonus-pills">`;
+
+  cfg.bonus.forEach((b, i) => {
+    html += `
+      <div class="chore-pill-row">
+        <div class="bonus-pill"><span class="p-emoji">${b.e}</span>${b.t}</div>
+        <button class="del-btn" onclick="deleteBonus(${i})">✕</button>
+      </div>`;
+  });
+
+  html += `</div>
+    <div class="add-row" style="margin-top:10px">
+      <input class="add-emoji-input" id="new-bonus-emoji" placeholder="⭐" maxlength="2"/>
+      <input class="add-text-input"  id="new-bonus-text"  placeholder="Add bonus reward…"
+             onkeydown="if(event.key==='Enter')addBonus()"/>
+      <button class="add-chore-btn" style="background:#FFD700" onclick="addBonus()">+</button>
+    </div>`;
+
+  editor.innerHTML = html;
+}
+
+function saveBonusChance() {
+  const val = parseFloat(document.getElementById('bonus-chance-val').value);
+  if (isNaN(val)||val<0||val>100) { showToast('Enter 0–100'); return; }
+  const cfg = getConfig();
+  cfg.bonusChance = val;
+  saveConfig(cfg);
+  showToast(`Bonus chance: ${val}%`);
+}
+
+function addBonus() {
+  const emojiEl = document.getElementById('new-bonus-emoji');
+  const textEl  = document.getElementById('new-bonus-text');
+  const emoji   = emojiEl.value.trim() || '⭐';
+  const text    = textEl.value.trim();
+  if (!text) { showToast('Enter a reward name!'); return; }
+  const cfg = getConfig();
+  cfg.bonus.push({e:emoji, t:text});
+  saveConfig(cfg);
+  emojiEl.value = '';
+  textEl.value  = '';
+  renderParentPanel(activeTab);
+  showToast(`Added: ${text}`);
+}
+
+function deleteBonus(i) {
+  if (!confirm('Remove this bonus?')) return;
+  const cfg = getConfig();
+  cfg.bonus.splice(i, 1);
+  saveConfig(cfg);
+  renderParentPanel(activeTab);
+  showToast('Bonus removed');
+}
+
+// ── PIN editor ──
+function renderPinEditor(editor) {
+  editor.innerHTML = `
+    <p style="color:#888;font-size:.85rem;margin-bottom:14px">Change your 4-digit parent PIN.</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="password" inputmode="numeric" maxlength="4" id="new-pin"
+             class="pin-input-single" placeholder="New PIN"/>
+      <button class="btn btn-primary btn-sm" onclick="savePin()">Save PIN</button>
+    </div>`;
+}
+
+function savePin() {
+  const val = document.getElementById('new-pin').value.trim();
+  if (!/^\d{4}$/.test(val)) { showToast('PIN must be 4 digits'); return; }
+  localStorage.setItem(KEY_PIN, val);
+  document.getElementById('new-pin').value = '';
+  showToast('✅ PIN updated!');
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────────
+
+let toastTimer;
+function showToast(msg, dur=2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), dur);
+}
+
+// ─── BOOT ──────────────────────────────────────────────────────────
+renderWelcome();
+</script>
+</body>
+</html>
