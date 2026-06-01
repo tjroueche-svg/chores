@@ -488,13 +488,14 @@ function getConfig() {
     const raw = localStorage.getItem(KEY_CONFIG);
     if (raw) {
       const cfg = JSON.parse(raw);
-      // Migration: add any DEFAULT_CHORES not already in saved config (matched by name)
+      // Migrate PIN from KEY_PIN into config (one-time)
+      if (!cfg.pin && localStorage.getItem(KEY_PIN)) {
+        cfg.pin = localStorage.getItem(KEY_PIN);
+      }
+      // Migration: add any DEFAULT_CHORES not already in saved config
       const existingNames = new Set(cfg.chores.map(c => c.t.toLowerCase()));
       const newChores = DEFAULT_CHORES.filter(c => !existingNames.has(c.t.toLowerCase()));
-      if (newChores.length) {
-        cfg.chores = [...cfg.chores, ...newChores];
-        localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg)); // persist immediately
-      }
+      if (newChores.length) cfg.chores = [...cfg.chores, ...newChores];
       return cfg;
     }
   } catch {}
@@ -503,11 +504,14 @@ function getConfig() {
     chores: DEFAULT_CHORES,
     bonus: DEFAULT_BONUS,
     parentEmail: '',
+    pin: '1234',
   };
 }
-function saveConfig(cfg) {
+
+async function saveConfig(cfg) {
   localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg));
-  pushRemote(); // fire-and-forget sync
+  const ok = await pushRemote();
+  if (!ok) showToast('⚠️ Settings saved locally but cloud sync failed', 3500);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -625,9 +629,9 @@ function generateWeekBonus(cfg) {
   return wb;
 }
 
-function saveWeekBonus(wb) {
+async function saveWeekBonus(wb) {
   localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
-  pushRemote();
+  await pushRemote();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -742,9 +746,9 @@ function getState() {
   return generateDayState(getConfig());
 }
 
-function saveState(s) {
+async function saveState(s) {
   localStorage.setItem(KEY_STATE, JSON.stringify(s));
-  pushRemote();
+  await pushRemote();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -1103,7 +1107,7 @@ function pinNext(idx) {
 }
 function checkPin() {
   const entered = ['p0','p1','p2','p3'].map(id=>document.getElementById(id).value).join('');
-  const stored  = localStorage.getItem(KEY_PIN) || '1234';
+  const stored  = getConfig().pin || '1234';
   if (entered===stored) {
     screenStack.push('screen-parent');
     renderParentPanel();
@@ -1352,11 +1356,16 @@ function renderSyncEditor(editor) {
   if (isConnected) {
     editor.innerHTML = `
       <div class="info-box" style="background:#eefaf4;border:1.5px solid #43c88a">
-        <strong style="color:#2ab87a">☁️ Sync is active!</strong><br>
+        <strong style="color:#2ab87a">☁️ Sync is active</strong><br>
         Bin ID: <code style="font-size:.72rem;word-break:break-all">${sync.binId}</code>
       </div>
-      <button class="btn btn-primary" onclick="forcePull()">🔄 Pull Latest from Cloud</button>
-      <button class="btn btn-danger" onclick="clearSyncSettings()">Disconnect Sync</button>`;
+      <div class="info-box" style="margin-top:0">
+        ⚠️ <strong>Every device needs setup.</strong> Each phone must enter the same Master Key in this tab. The credentials are never stored in the cloud — only your chore data is.
+      </div>
+      <button class="btn btn-primary" id="test-sync-btn" onclick="testSync()">🧪 Test Connection</button>
+      <button class="btn btn-secondary" onclick="forcePull()" style="margin-top:8px">🔄 Force Pull from Cloud</button>
+      <button class="btn btn-danger" onclick="clearSyncSettings()">Disconnect Sync</button>
+      <div id="test-result" style="margin-top:10px;font-size:.82rem;line-height:1.5;padding:0 2px"></div>`;
   } else {
     editor.innerHTML = `
       <div class="info-box">
@@ -1439,6 +1448,43 @@ async function saveManualSync() {
   renderParentPanel(activeTab);
 }
 
+async function testSync() {
+  const btn = document.getElementById('test-sync-btn');
+  const res = document.getElementById('test-result');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Testing…'; }
+  if (res) res.innerHTML = '';
+
+  const sync = getSyncConfig();
+  if (!sync.binId || !sync.apiKey) {
+    if (res) res.innerHTML = '<span style="color:#e05555">❌ No credentials found. Please reconnect.</span>';
+    if (btn) { btn.disabled = false; btn.textContent = '🧪 Test Connection'; }
+    return;
+  }
+
+  // Test push
+  const pushOk = await pushRemote();
+
+  // Test pull
+  let pullOk = false;
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest`, {
+      cache: 'no-store',
+      headers: { 'X-Master-Key': sync.apiKey },
+    });
+    pullOk = r.ok;
+  } catch {}
+
+  if (res) {
+    res.innerHTML = `
+      ${pushOk ? '✅' : '❌'} <strong>Push (write):</strong> ${pushOk ? 'Working' : 'FAILED — check your Master Key'}<br>
+      ${pullOk ? '✅' : '❌'} <strong>Pull (read):</strong>  ${pullOk ? 'Working' : 'FAILED — check your Bin ID'}<br>
+      ${pushOk && pullOk
+        ? '<br><span style="color:#2ab87a;font-weight:700">✅ Sync is fully working!</span>'
+        : '<br><span style="color:#e05555;font-weight:700">⚠️ Fix the errors above, then try again.</span>'}`;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '🧪 Test Connection'; }
+}
+
 async function forcePull() {
   await pullFromRemote();
   renderWelcome();
@@ -1467,12 +1513,14 @@ function renderPinEditor(editor) {
     </div>`;
 }
 
-function savePin() {
+async function savePin() {
   const val = document.getElementById('new-pin').value.trim();
   if (!/^\d{4}$/.test(val)) { showToast('PIN must be 4 digits'); return; }
-  localStorage.setItem(KEY_PIN, val);
+  const cfg = getConfig();
+  cfg.pin = val;
+  await saveConfig(cfg); // syncs to cloud
   document.getElementById('new-pin').value = '';
-  showToast('✅ PIN updated!');
+  showToast('✅ PIN updated & synced!');
 }
 
 // ─────────────────────────────────────────────────────────────────
