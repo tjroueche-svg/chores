@@ -40,6 +40,16 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
 /* ── Screens ── */
 .screen{display:none}.screen.active{display:block}
 
+/* ── Sync badge ── */
+.sync-badge{
+  font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:99px;
+  white-space:nowrap;
+}
+.sync-badge.ok     {background:#eefaf4;color:#2ab87a}
+.sync-badge.syncing{background:#f0f0ff;color:#6C63FF}
+.sync-badge.error  {background:#fff0f0;color:#e05555}
+.sync-badge.local  {background:#f5f5f5;color:#aaa}
+
 /* ── Date badge ── */
 .date-badge{
   display:block;text-align:center;
@@ -325,7 +335,10 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
 <div class="screen active" id="screen-welcome">
   <h1>🌀 Chore Time!</h1>
   <p class="subtitle">Tap your name to see today's chores!</p>
-  <span class="date-badge" id="welcome-date"></span>
+  <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+    <span class="date-badge" id="welcome-date" style="margin-bottom:0"></span>
+    <span class="sync-badge" id="sync-badge" style="display:none"></span>
+  </div>
   <div class="kid-grid" id="kid-grid"></div>
   <p class="section-label">Today's Board</p>
   <ul class="dash-list" id="dash-welcome"></ul>
@@ -409,6 +422,7 @@ const KEY_STATE      = 'choreState3';
 const KEY_CONFIG     = 'choreConfig3';
 const KEY_PIN        = 'chorePin';
 const KEY_WEEK_BONUS = 'choreWeekBonus'; // persists Mon–Fri independently of daily state
+const KEY_SYNC       = 'choreSyncCfg';   // JSONBin credentials (device-local only)
 const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const CHORES_PER_KID = 3;
@@ -444,8 +458,16 @@ const DEFAULT_CHORES = [
   {e:'🧻', t:'Restock Toilet Paper',          schedule:'random', frequency:1},
   {e:'🧹', t:'Vacuum Hallway & Stairs',       schedule:'fixed',  days:[6]},
   {e:'🛋️', t:'Vacuum Bonus Room',            schedule:'fixed',  days:[6]},
-  {e:'🍽️', t:'Set & Clear the Table',        schedule:'random', frequency:5},
-  {e:'🌿', t:'Water the Plants',              schedule:'fixed',  days:[1,5]},
+  {e:'🍽️', t:'Set & Clear the Table',              schedule:'random', frequency:5},
+  {e:'🌿', t:'Water the Plants',                    schedule:'fixed',  days:[1,5]},
+  {e:'🪑', t:'Wipe Barstools',                      schedule:'random', frequency:1},
+  {e:'🗄️', t:'Wipe Upper & Lower Cabinets',        schedule:'random', frequency:1},
+  {e:'🧹', t:'Sweep & Mop Upstairs Hall & Stairs',  schedule:'random', frequency:1},
+  {e:'💨', t:'Blow Out Garage & Patio',             schedule:'random', frequency:1},
+  {e:'👩', t:"Mom's Choice",                        schedule:'random', frequency:1},
+  {e:'🛋️', t:'Wipe Couch',                         schedule:'random', frequency:1},
+  {e:'🌱', t:'Mow',                                 schedule:'random', frequency:1},
+  {e:'✂️', t:'Edge',                               schedule:'random', frequency:1},
 ];
 
 const DEFAULT_BONUS = [
@@ -463,7 +485,17 @@ const DEFAULT_BONUS = [
 function getConfig() {
   try {
     const raw = localStorage.getItem(KEY_CONFIG);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      // Migration: add any DEFAULT_CHORES not already in saved config (matched by name)
+      const existingNames = new Set(cfg.chores.map(c => c.t.toLowerCase()));
+      const newChores = DEFAULT_CHORES.filter(c => !existingNames.has(c.t.toLowerCase()));
+      if (newChores.length) {
+        cfg.chores = [...cfg.chores, ...newChores];
+        localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg)); // persist immediately
+      }
+      return cfg;
+    }
   } catch {}
   return {
     kids: DEFAULT_KIDS,
@@ -472,7 +504,90 @@ function getConfig() {
     parentEmail: '',
   };
 }
-function saveConfig(cfg) { localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg)); }
+function saveConfig(cfg) {
+  localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg));
+  pushRemote(); // fire-and-forget sync
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CROSS-DEVICE SYNC  (JSONBin.io)
+// All mutable state is pushed to a shared JSON bin so every device
+// sees the same config, completion state, and weekly bonus progress.
+// The bin credentials are stored locally per-device (KEY_SYNC).
+// ─────────────────────────────────────────────────────────────────
+
+function getSyncConfig() {
+  try { return JSON.parse(localStorage.getItem(KEY_SYNC)) || {}; } catch { return {}; }
+}
+function saveSyncConfig(s) { localStorage.setItem(KEY_SYNC, JSON.stringify(s)); }
+
+function showSyncBadge(state) {
+  const el = document.getElementById('sync-badge');
+  if (!el) return;
+  const map = {
+    ok:      { text:'☁️ Synced',   cls:'ok'      },
+    syncing: { text:'🔄 Syncing…', cls:'syncing'  },
+    error:   { text:'⚠️ Sync Error',cls:'error'   },
+    local:   { text:'📱 Local Only',cls:'local'   },
+  };
+  const { text, cls } = map[state] || map.local;
+  el.textContent  = text;
+  el.className    = `sync-badge ${cls}`;
+  el.style.display = 'inline-block';
+}
+
+// Build the full payload to push/pull
+function buildSyncPayload() {
+  return {
+    config:      getConfig(),
+    dailyState:  getState(),
+    weeklyBonus: (() => { try { return JSON.parse(localStorage.getItem(KEY_WEEK_BONUS)) || null; } catch { return null; } })(),
+  };
+}
+
+// Push current state to JSONBin (background, non-blocking)
+async function pushRemote() {
+  const sync = getSyncConfig();
+  if (!sync.binId || !sync.apiKey) return;
+  try {
+    showSyncBadge('syncing');
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.apiKey },
+      body: JSON.stringify(buildSyncPayload()),
+    });
+    showSyncBadge(res.ok ? 'ok' : 'error');
+  } catch { showSyncBadge('error'); }
+}
+
+// Pull latest from JSONBin and merge into localStorage (awaited on boot)
+async function pullFromRemote() {
+  const sync = getSyncConfig();
+  if (!sync.binId || !sync.apiKey) { showSyncBadge('local'); return; }
+  try {
+    showSyncBadge('syncing');
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest`, {
+      headers: { 'X-Master-Key': sync.apiKey },
+    });
+    if (!res.ok) { showSyncBadge('error'); return; }
+    const data = (await res.json()).record || {};
+
+    // Remote wins for config
+    if (data.config) localStorage.setItem(KEY_CONFIG, JSON.stringify(data.config));
+
+    // Remote wins for daily state if it's for today
+    if (data.dailyState?.date === todayStr()) {
+      localStorage.setItem(KEY_STATE, JSON.stringify(data.dailyState));
+    }
+
+    // Remote wins for weekly bonus if it's still this week
+    if (data.weeklyBonus?.weekId === weekId()) {
+      localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(data.weeklyBonus));
+    }
+
+    showSyncBadge('ok');
+  } catch { showSyncBadge('error'); }
+}
 
 // ─────────────────────────────────────────────────────────────────
 // WEEKLY BONUS STATE
@@ -511,7 +626,10 @@ function generateWeekBonus(cfg) {
   return wb;
 }
 
-function saveWeekBonus(wb) { localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb)); }
+function saveWeekBonus(wb) {
+  localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
+  pushRemote();
+}
 
 // ─────────────────────────────────────────────────────────────────
 // SEEDED RNG — deterministic per week so the same day always gives
@@ -625,7 +743,10 @@ function getState() {
   return generateDayState(getConfig());
 }
 
-function saveState(s) { localStorage.setItem(KEY_STATE, JSON.stringify(s)); }
+function saveState(s) {
+  localStorage.setItem(KEY_STATE, JSON.stringify(s));
+  pushRemote();
+}
 
 // ─────────────────────────────────────────────────────────────────
 // NAV
@@ -997,7 +1118,7 @@ function checkPin() {
 // ─────────────────────────────────────────────────────────────────
 
 function renderParentPanel(tab) {
-  const tabs = ['📋 Chores', '⭐ Bonus', '📧 Notify', '🔑 PIN'];
+  const tabs = ['📋 Chores', '⭐ Bonus', '📧 Notify', '☁️ Sync', '🔑 PIN'];
   if (!tab) tab = activeTab || tabs[0];
   activeTab = tab;
 
@@ -1009,6 +1130,7 @@ function renderParentPanel(tab) {
   if      (tab==='📋 Chores') renderChoreEditor(editor);
   else if (tab==='⭐ Bonus')  renderBonusEditor(editor);
   else if (tab==='📧 Notify') renderNotifyEditor(editor);
+  else if (tab==='☁️ Sync')   renderSyncEditor(editor);
   else                        renderPinEditor(editor);
 }
 
@@ -1218,6 +1340,118 @@ function saveEmail() {
 }
 
 // ─────────────────────────────────────────────────────────────────
+// SYNC EDITOR
+// ─────────────────────────────────────────────────────────────────
+
+function renderSyncEditor(editor) {
+  const sync = getSyncConfig();
+  const isConnected = !!(sync.binId && sync.apiKey);
+
+  if (isConnected) {
+    editor.innerHTML = `
+      <div class="info-box" style="background:#eefaf4;border:1.5px solid #43c88a">
+        <strong style="color:#2ab87a">☁️ Sync is active!</strong><br>
+        Bin ID: <code style="font-size:.72rem;word-break:break-all">${sync.binId}</code>
+      </div>
+      <button class="btn btn-primary" onclick="forcePull()">🔄 Pull Latest from Cloud</button>
+      <button class="btn btn-danger" onclick="clearSyncSettings()">Disconnect Sync</button>`;
+  } else {
+    editor.innerHTML = `
+      <div class="info-box">
+        <strong>Set up cross-device sync (free, ~2 minutes):</strong><br><br>
+        1. Go to <strong>jsonbin.io</strong> → create a free account.<br>
+        2. Go to <strong>API Keys</strong> in your account menu → copy your <strong>Master Key</strong>.<br>
+        3. Paste it below → tap <strong>Create & Connect</strong>.<br>
+        The app creates the bin for you — no other steps needed.
+      </div>
+      <label style="font-size:.82rem;font-weight:700;color:#555">Master Key</label>
+      <input class="email-input" id="sync-api-key" type="password" placeholder="$2a$10$…"/>
+      <button class="btn btn-primary" style="margin-top:12px" id="create-bin-btn" onclick="createAndConnect()">
+        ☁️ Create & Connect
+      </button>
+      <p style="color:#bbb;font-size:.75rem;margin-top:12px;text-align:center">
+        Already have a Bin ID?
+        <span style="color:#6C63FF;cursor:pointer;font-weight:700" onclick="showManualSyncForm()">Enter it manually</span>
+      </p>
+      <div id="manual-sync-form" style="display:none;margin-top:10px">
+        <label style="font-size:.82rem;font-weight:700;color:#555">Bin ID</label>
+        <input class="email-input" id="sync-bin-id" placeholder="664abc123…" style="margin-bottom:8px"/>
+        <button class="btn btn-secondary" onclick="saveManualSync()">Connect Existing Bin</button>
+      </div>`;
+  }
+}
+
+function showManualSyncForm() {
+  const el = document.getElementById('manual-sync-form');
+  if (el) el.style.display = 'block';
+}
+
+async function createAndConnect() {
+  const apiKey = document.getElementById('sync-api-key')?.value.trim();
+  if (!apiKey) { showToast('Paste your Master Key first'); return; }
+
+  const btn = document.getElementById('create-bin-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Creating…';
+
+  try {
+    const res = await fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': apiKey,
+        'X-Bin-Name': 'ChoreTime',
+        'X-Private': 'true',
+      },
+      body: JSON.stringify(buildSyncPayload()),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast(`❌ ${err.message || 'Check your Master Key and try again'}`);
+      btn.disabled = false; btn.textContent = '☁️ Create & Connect';
+      return;
+    }
+
+    const data  = await res.json();
+    const binId = data.metadata?.id;
+    if (!binId) throw new Error('No bin ID');
+
+    saveSyncConfig({ binId, apiKey });
+    showSyncBadge('ok');
+    showToast('☁️ Connected! All devices will now stay in sync.', 3500);
+    renderParentPanel(activeTab);
+  } catch {
+    showToast('❌ Error — check your Master Key');
+    btn.disabled = false; btn.textContent = '☁️ Create & Connect';
+  }
+}
+
+async function saveManualSync() {
+  const binId  = document.getElementById('sync-bin-id')?.value.trim();
+  const apiKey = document.getElementById('sync-api-key')?.value.trim();
+  if (!binId || !apiKey) { showToast('Enter both fields'); return; }
+  saveSyncConfig({ binId, apiKey });
+  await pushRemote();
+  showToast('☁️ Connected!', 3000);
+  renderParentPanel(activeTab);
+}
+
+async function forcePull() {
+  await pullFromRemote();
+  renderWelcome();
+  showToast('🔄 Pulled latest data from cloud!');
+}
+
+function clearSyncSettings() {
+  if (!confirm('Disconnect sync? Data stays local until you reconnect.')) return;
+  localStorage.removeItem(KEY_SYNC);
+  showSyncBadge('local');
+  renderParentPanel(activeTab);
+  showToast('Sync disconnected');
+}
+
+// ─────────────────────────────────────────────────────────────────
 // PIN EDITOR
 // ─────────────────────────────────────────────────────────────────
 
@@ -1253,9 +1487,12 @@ function showToast(msg, dur=2500) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// BOOT
+// BOOT — pull latest from cloud first, then render
 // ─────────────────────────────────────────────────────────────────
-renderWelcome();
+(async () => {
+  await pullFromRemote(); // no-op if sync not configured; ~0.5s if it is
+  renderWelcome();
+})();
 </script>
 </body>
 </html>
