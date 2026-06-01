@@ -276,6 +276,22 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
 }
 .add-chore-btn:active{background:#5550e8}
 
+/* Eligible kids + shared row */
+.eligible-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.eligible-row label{font-size:.72rem;font-weight:700;color:#888;min-width:60px}
+.kid-pill{
+  background:#fff;border:2px solid #e0dcff;border-radius:8px;
+  padding:4px 8px;font-size:.72rem;font-weight:800;color:#999;
+  cursor:pointer;transition:all .15s;
+}
+.kid-pill.active{background:#6C63FF;border-color:#6C63FF;color:#fff}
+.kid-pill:active{opacity:.8}
+.shared-toggle{
+  display:flex;align-items:center;gap:6px;margin-bottom:6px;
+  font-size:.75rem;font-weight:700;color:#777;cursor:pointer;
+}
+.shared-toggle input{accent-color:#6C63FF;width:15px;height:15px;cursor:pointer}
+
 /* Bonus pill */
 .bonus-pill-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .bonus-pill{
@@ -419,11 +435,12 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────
 
-const KEY_STATE      = 'choreState3';
-const KEY_CONFIG     = 'choreConfig3';
-const KEY_PIN        = 'chorePin';
-const KEY_WEEK_BONUS = 'choreWeekBonus'; // persists Mon–Fri independently of daily state
-const KEY_SYNC       = 'choreSyncCfg';   // JSONBin credentials (device-local only)
+const KEY_STATE        = 'choreState3';
+const KEY_CONFIG       = 'choreConfig3';
+const KEY_PIN          = 'chorePin';
+const KEY_WEEK_BONUS   = 'choreWeekBonus';  // persists Mon–Fri independently of daily state
+const KEY_SYNC         = 'choreSyncCfg';    // JSONBin credentials (device-local only)
+const KEY_BONUS_CYCLE  = 'choreBonusCycle'; // tracks which bonuses have been used across weeks
 const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const CHORES_PER_KID = 3;
@@ -489,12 +506,13 @@ function getConfig() {
     if (raw) {
       const cfg = JSON.parse(raw);
       // Migrate PIN from KEY_PIN into config (one-time)
-      if (!cfg.pin && localStorage.getItem(KEY_PIN)) {
-        cfg.pin = localStorage.getItem(KEY_PIN);
-      }
-      // Migration: add any DEFAULT_CHORES not already in saved config
+      if (!cfg.pin && localStorage.getItem(KEY_PIN)) cfg.pin = localStorage.getItem(KEY_PIN);
+      // Never re-add chores that were explicitly deleted
+      const deletedNames = new Set((cfg.deletedChores || []).map(t => t.toLowerCase()));
       const existingNames = new Set(cfg.chores.map(c => c.t.toLowerCase()));
-      const newChores = DEFAULT_CHORES.filter(c => !existingNames.has(c.t.toLowerCase()));
+      const newChores = DEFAULT_CHORES.filter(c =>
+        !existingNames.has(c.t.toLowerCase()) && !deletedNames.has(c.t.toLowerCase())
+      );
       if (newChores.length) cfg.chores = [...cfg.chores, ...newChores];
       return cfg;
     }
@@ -505,6 +523,7 @@ function getConfig() {
     bonus: DEFAULT_BONUS,
     parentEmail: '',
     pin: '1234',
+    deletedChores: [],   // names of chores explicitly deleted — never re-added
   };
 }
 
@@ -617,13 +636,41 @@ function getWeekBonus() {
 }
 
 function generateWeekBonus(cfg) {
+  if (!cfg.bonus.length) {
+    const wb = { weekId: weekId(), bonuses: {} };
+    cfg.kids.forEach(k => { wb.bonuses[k.name] = null; });
+    localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
+    return wb;
+  }
+
+  // Load the cycle tracker — tracks which bonuses have been given out
+  // so we don't repeat until all have been used at least once
+  let cycle = {};
+  try { cycle = JSON.parse(localStorage.getItem(KEY_BONUS_CYCLE)) || {}; } catch {}
+  if (!Array.isArray(cycle.used)) cycle.used = [];
+
   const bonuses = {};
   cfg.kids.forEach((kid, i) => {
-    if (!cfg.bonus.length) { bonuses[kid.name] = null; return; }
-    const seed = strSeed(`${weekId()}-bonus-${kid.name}-${i}`);
-    const idx  = Math.floor(seededRandFloat(seed) * cfg.bonus.length);
-    bonuses[kid.name] = { ...cfg.bonus[idx], done: false, notified: false };
+    // Available = bonuses not yet used in this cycle
+    let available = cfg.bonus.filter(b => !cycle.used.includes(b.t));
+    if (available.length === 0) {
+      // All used — reset the cycle and start fresh
+      cycle.used = [];
+      available = [...cfg.bonus];
+    }
+
+    // Seeded pick so same week always gives same bonus to same kid
+    const seed = strSeed(`${weekId()}-bonus-${kid.name}-${i}-${cycle.used.length}`);
+    const idx  = Math.floor(seededRandFloat(seed) * available.length);
+    const picked = available[idx];
+
+    bonuses[kid.name] = { ...picked, done: false, notified: false };
+    if (!cycle.used.includes(picked.t)) cycle.used.push(picked.t);
   });
+
+  // Persist the updated cycle
+  localStorage.setItem(KEY_BONUS_CYCLE, JSON.stringify(cycle));
+
   const wb = { weekId: weekId(), bonuses };
   localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
   return wb;
@@ -704,32 +751,52 @@ function getTodayPool(cfg) {
 function todayStr() { return new Date().toISOString().slice(0, 10); }
 
 function generateDayState(cfg) {
-  const kids = cfg.kids;
+  const kids    = cfg.kids;
+  const dayIdx  = new Date().getDay();
+  const wid     = weekId();
 
-  // Build today's chore pool
-  let pool = getTodayPool(cfg);
+  // Determine which chores are active today (respects fixed vs random schedule)
+  function isActiveToday(chore, idx) {
+    if (chore.schedule === 'fixed') return (chore.days || []).includes(dayIdx);
+    const freq   = Math.min(Math.max(chore.frequency || 1, 1), 7);
+    const active = seededShuffle([0,1,2,3,4,5,6], strSeed(`${wid}-${idx}-${chore.t}`)).slice(0, freq);
+    return active.includes(dayIdx);
+  }
 
-  // Need kids.length × CHORES_PER_KID slots. Repeat pool if too small.
-  const needed = kids.length * CHORES_PER_KID;
-  while (pool.length < needed) pool = [...pool, ...pool];
-  pool = pool.slice(0, needed);
+  // All chores active today, indexed so the seeded schedule stays stable
+  const activeToday = cfg.chores
+    .map((c, i) => ({ ...c, _i: i }))
+    .filter(c => isActiveToday(c, c._i));
 
-  // Seeded shuffle — same day always yields same assignments
-  const shuffled = seededShuffle(pool, strSeed(`${todayStr()}-assign`));
+  // Non-shared chores can only be assigned to one kid. Track used ones.
+  const usedNonShared = new Set();
+
+  // Randomise kid order (seeded so same day = same order)
   const kidOrder = seededShuffle([...kids], strSeed(`${todayStr()}-kids`));
 
   const assignments = {};
-  kidOrder.forEach((kid, i) => {
-    assignments[kid.name] = shuffled
-      .slice(i * CHORES_PER_KID, (i + 1) * CHORES_PER_KID)
-      .map(c => ({ e: c.e, t: c.t, done: false }));
+  kidOrder.forEach((kid, pos) => {
+    // Chores this kid is eligible for, and still available
+    const eligible = activeToday.filter(c => {
+      const kidOk = !c.eligible || c.eligible.length === 0 || c.eligible.includes(kid.name);
+      if (!kidOk) return false;
+      if (c.shared) return true;           // shared: unlimited
+      return !usedNonShared.has(c.t);      // non-shared: only if not yet taken
+    });
+
+    // Seeded shuffle per kid so results are deterministic
+    const picked = seededShuffle(eligible, strSeed(`${todayStr()}-${kid.name}-${pos}`))
+                   .slice(0, CHORES_PER_KID);
+
+    // Lock in non-shared chores
+    picked.forEach(c => { if (!c.shared) usedNonShared.add(c.t); });
+
+    assignments[kid.name] = picked.map(c => ({ e: c.e, t: c.t, done: false }));
   });
 
-  // Revealed flags
   const revealed = {};
   kids.forEach(k => { revealed[k.name] = false; });
 
-  // Bonus chores are managed separately in weekly state (see getWeekBonus)
   const s = { date: todayStr(), assignments, revealed };
   localStorage.setItem(KEY_STATE, JSON.stringify(s));
   return s;
@@ -1190,6 +1257,20 @@ function renderChoreEditor(editor) {
           <button class="freq-btn" onclick="changeFreq(${i},+1)">+</button>
         </div>
       </div>
+      <!-- Eligible kids -->
+      <div class="eligible-row">
+        <label>Who:</label>
+        ${cfg.kids.map(kid => {
+          const active = !c.eligible || c.eligible.length === 0 || c.eligible.includes(kid.name);
+          return `<span class="kid-pill ${active?'active':''}"
+                       onclick="toggleEligible(${i},'${kid.name}')">${kid.avatar} ${kid.name}</span>`;
+        }).join('')}
+      </div>
+      <!-- Shared flag -->
+      <label class="shared-toggle">
+        <input type="checkbox" ${c.shared?'checked':''} onchange="toggleShared(${i},this.checked)"/>
+        Multiple kids can share this chore on the same day
+      </label>
     </div>`;
   });
 
@@ -1203,6 +1284,34 @@ function renderChoreEditor(editor) {
     <button class="btn btn-danger" style="margin-top:12px" onclick="rerollDay()">🎲 Re-roll Today's Assignments</button>`;
 
   editor.innerHTML = html;
+}
+
+async function toggleEligible(choreIdx, kidName) {
+  const cfg  = getConfig();
+  const c    = cfg.chores[choreIdx];
+  // If no eligible list (= all kids), expand to all kids first, then remove
+  if (!c.eligible || c.eligible.length === 0) {
+    c.eligible = cfg.kids.map(k => k.name);
+  }
+  const pos = c.eligible.indexOf(kidName);
+  if (pos >= 0) {
+    c.eligible.splice(pos, 1);
+    // If nobody left, keep at least one — don't allow zero eligible
+    if (c.eligible.length === 0) c.eligible = cfg.kids.map(k => k.name);
+  } else {
+    c.eligible.push(kidName);
+    // If all kids selected, simplify back to empty (= all)
+    if (c.eligible.length === cfg.kids.length) c.eligible = [];
+  }
+  await saveConfig(cfg);
+  renderParentPanel(activeTab);
+}
+
+async function toggleShared(choreIdx, checked) {
+  const cfg = getConfig();
+  cfg.chores[choreIdx].shared = checked;
+  await saveConfig(cfg);
+  // No full re-render needed — checkbox state is already updated in DOM
 }
 
 function setChoreSchedule(idx, type) {
@@ -1246,11 +1355,14 @@ function addChore() {
   showToast(`Added: ${t}`);
 }
 
-function deleteChore(i) {
+async function deleteChore(i) {
   if (!confirm('Remove this chore?')) return;
   const cfg = getConfig();
+  const name = cfg.chores[i].t; // save name before removal
   cfg.chores.splice(i, 1);
-  saveConfig(cfg);
+  if (!cfg.deletedChores) cfg.deletedChores = [];
+  cfg.deletedChores.push(name); // prevent migration from re-adding it
+  await saveConfig(cfg);
   renderParentPanel(activeTab);
   showToast('Chore removed');
 }
