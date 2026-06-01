@@ -26,20 +26,16 @@ body{
   position:relative;overflow:hidden;
 }
 .card::before{
-  content:'';position:absolute;
-  width:200px;height:200px;
+  content:'';position:absolute;width:200px;height:200px;
   background:radial-gradient(circle,#FFE06640,transparent 70%);
   top:-60px;right:-60px;border-radius:50%;pointer-events:none;
 }
 
-/* ── Typography ── */
-h1{font-size:1.9rem;font-weight:900;color:#6C63FF;text-align:center;line-height:1.1}
+/* ── Type ── */
+h1{font-size:1.85rem;font-weight:900;color:#6C63FF;text-align:center;line-height:1.1}
 .subtitle{text-align:center;color:#999;font-size:.88rem;margin-top:4px}
-h2{font-size:1.15rem;font-weight:800;color:#333}
-.section-label{
-  font-size:.72rem;font-weight:800;color:#bbb;
-  text-transform:uppercase;letter-spacing:1px;margin:18px 0 8px;
-}
+h2{font-size:1.1rem;font-weight:800;color:#333}
+.section-label{font-size:.7rem;font-weight:800;color:#bbb;text-transform:uppercase;letter-spacing:1px;margin:18px 0 8px}
 
 /* ── Screens ── */
 .screen{display:none}.screen.active{display:block}
@@ -47,10 +43,8 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
 /* ── Date badge ── */
 .date-badge{
   display:block;text-align:center;
-  background:#f0f0ff;color:#6C63FF;
-  font-size:.8rem;font-weight:700;
-  padding:5px 14px;border-radius:99px;
-  margin-bottom:16px;width:fit-content;margin-inline:auto;
+  background:#f0f0ff;color:#6C63FF;font-size:.8rem;font-weight:700;
+  padding:5px 14px;border-radius:99px;margin-bottom:16px;width:fit-content;margin-inline:auto;
 }
 
 /* ── Kid grid ── */
@@ -65,10 +59,11 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
 }
 .kid-btn:active{transform:scale(.95);box-shadow:none}
 .kid-btn .av{font-size:2.2rem;line-height:1}
-.kid-btn .done-tag{font-size:.68rem;background:rgba(255,255,255,.25);border-radius:99px;padding:2px 8px}
-.kid-btn.bonus-kid{box-shadow:0 6px 20px rgba(255,193,7,.5);outline:3px solid #FFD700}
+.kid-btn .tag{font-size:.68rem;background:rgba(255,255,255,.25);border-radius:99px;padding:2px 8px}
+.kid-btn.is-done{background:linear-gradient(135deg,#43c88a,#2ab87a)}
+.kid-btn.is-monday{box-shadow:0 6px 20px rgba(255,193,7,.55);outline:3px solid #FFD700}
 
-/* ── Header row ── */
+/* ── Header ── */
 .hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .back-btn{
   background:#f0f0ff;border:none;border-radius:12px;
@@ -82,34 +77,62 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
   background:linear-gradient(135deg,#f8f7ff,#f0fefe);
   border:3px solid #e0dcff;border-radius:20px;
   padding:18px 16px;margin-bottom:16px;
-  min-height:110px;
+  min-height:100px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   position:relative;overflow:hidden;text-align:center;
 }
-.slot-emoji{font-size:2.8rem;line-height:1;display:block}
-.slot-text{font-size:1rem;font-weight:800;color:#333;margin-top:8px;min-height:1.6em;line-height:1.3}
-
-/* Chore list inside reveal */
-.chore-list-reveal{width:100%;text-align:left;margin-top:8px;display:none}
-.chore-list-reveal li{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 11px;border-radius:12px;
-  background:#fff;margin-bottom:6px;
-  font-size:.93rem;font-weight:600;color:#333;
-  box-shadow:0 2px 8px rgba(0,0,0,.06);list-style:none;
-}
-.chore-list-reveal li .c-emoji{font-size:1.25rem;flex-shrink:0}
-.chore-list-reveal li.bonus-chore-item{background:#fffbea;border:1.5px solid #FFD700}
-
-/* Bonus badge */
+.slot-emoji{font-size:2.6rem;line-height:1;display:block}
+.slot-text{font-size:1rem;font-weight:800;color:#333;margin-top:8px;min-height:1.4em;line-height:1.3}
 .bonus-badge{
-  display:none;
-  background:linear-gradient(135deg,#FFD700,#FF8C00);
+  display:none;background:linear-gradient(135deg,#FFD700,#FF8C00);
   color:#fff;font-size:.75rem;font-weight:800;
-  padding:3px 10px;border-radius:99px;margin-top:6px;letter-spacing:.5px;
+  padding:3px 10px;border-radius:99px;margin-top:6px;
 }
 
-/* Shimmer + animations */
+/* ── Chore list (post-reveal) ── */
+.chore-list-reveal{width:100%;text-align:left;margin-top:8px;display:none}
+.chore-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 12px;border-radius:14px;
+  background:#fff;margin-bottom:7px;
+  box-shadow:0 2px 8px rgba(0,0,0,.07);
+  cursor:pointer;transition:background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.chore-item:active{background:#f5f5f5}
+.chore-item .c-emoji{font-size:1.3rem;flex-shrink:0}
+.chore-item .c-text{font-size:.93rem;font-weight:600;color:#333;flex:1;line-height:1.3}
+.chore-item.is-done .c-text{text-decoration:line-through;color:#aaa}
+.chore-item .check-circle{
+  width:26px;height:26px;border-radius:50%;
+  border:2.5px solid #d0d0d0;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.9rem;transition:all .2s;
+}
+.chore-item.is-done .check-circle{background:#43c88a;border-color:#43c88a;color:#fff}
+.chore-item.bonus-item{background:#fffbea;border:1.5px solid #FFD700}
+.chore-item.bonus-item.is-done{background:#fef9e0}
+
+/* ── All-done banner ── */
+.all-done-banner{
+  background:linear-gradient(135deg,#43c88a,#2ab87a);
+  color:#fff;border-radius:18px;padding:18px;
+  text-align:center;margin-bottom:12px;display:none;
+}
+.all-done-banner h3{font-size:1.2rem;font-weight:900;margin-bottom:6px}
+.all-done-banner p{font-size:.85rem;opacity:.9;margin-bottom:12px}
+.notify-btn{
+  display:inline-block;background:#fff;color:#2ab87a;
+  font-size:.9rem;font-weight:800;padding:10px 20px;
+  border-radius:99px;text-decoration:none;
+  border:none;cursor:pointer;
+}
+.notify-btn:active{opacity:.85}
+/* Bonus banner — gold variant */
+.bonus-done-banner{background:linear-gradient(135deg,#f5a623,#e6870a) !important}
+.bonus-done-banner .notify-btn{color:#e6870a !important}
+
+/* ── Shimmer + animations ── */
 .shimmer{
   position:absolute;inset:0;
   background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);
@@ -124,9 +147,9 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
 }
 .slot-emoji.spinning{animation:spin-flash .13s infinite}
 @keyframes bounce-in{
-  0%{transform:scale(.5);opacity:0}60%{transform:scale(1.12);opacity:1}80%{transform:scale(.96)}100%{transform:scale(1)}
+  0%{transform:scale(.5);opacity:0}60%{transform:scale(1.1);opacity:1}80%{transform:scale(.97)}100%{transform:scale(1)}
 }
-.slot-emoji.result{animation:bounce-in .5s cubic-bezier(.36,.07,.19,.97) forwards}
+.slot-emoji.result{animation:bounce-in .45s cubic-bezier(.36,.07,.19,.97) forwards}
 @keyframes confetti-fall{
   0%{transform:translateY(-10px) rotate(0deg);opacity:1}100%{transform:translateY(90px) rotate(360deg);opacity:0}
 }
@@ -138,7 +161,7 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
 /* ── Buttons ── */
 .btn{
   display:block;width:100%;border:none;border-radius:18px;
-  padding:16px;font-size:1rem;font-weight:800;
+  padding:15px;font-size:.98rem;font-weight:800;
   cursor:pointer;transition:transform .15s,box-shadow .15s;
 }
 .btn:active{transform:scale(.96)}
@@ -146,93 +169,135 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
 .btn-primary:disabled{background:#ccc;box-shadow:none;cursor:default;opacity:.7}
 .btn-secondary{background:#f0f0ff;color:#6C63FF;margin-top:10px}
 .btn-danger{background:#fff0f0;color:#e05555;margin-top:10px;font-size:.88rem;padding:12px}
-.btn-sm{padding:9px 14px;font-size:.82rem;width:auto;border-radius:12px}
+.btn-sm{padding:9px 14px;font-size:.8rem;width:auto;border-radius:12px}
 
 /* ── Dashboard ── */
-.dash-list{list-style:none;display:flex;flex-direction:column;gap:7px}
+.dash-list{list-style:none;display:flex;flex-direction:column;gap:6px}
 .dash-item{
-  display:flex;align-items:flex-start;gap:9px;
-  background:#f8f7ff;border-radius:14px;padding:10px 12px;
+  display:flex;align-items:center;gap:9px;
+  background:#f8f7ff;border-radius:13px;padding:10px 12px;
 }
-.dash-item .kid-lbl{font-weight:800;color:#6C63FF;font-size:.82rem;min-width:56px;flex-shrink:0;padding-top:1px}
-.dash-item .chore-lbl{color:#555;font-size:.8rem;flex:1;line-height:1.5}
-.dash-item .av-sm{font-size:1rem;flex-shrink:0;padding-top:1px}
-.dash-item.is-bonus{background:#fffbea;border:1.5px solid #FFD700}
+.dash-item .kid-lbl{font-weight:800;color:#6C63FF;font-size:.82rem;min-width:56px;flex-shrink:0}
+.dash-item .chore-lbl{color:#555;font-size:.79rem;flex:1;line-height:1.4}
+.dash-item .av-sm{font-size:1rem;flex-shrink:0}
+.dash-item.is-done-dash{background:#eefaf4}
+.dash-item.is-bonus-dash{background:#fffbea;border:1.5px solid #FFD700}
 .no-dash{color:#bbb;font-size:.82rem;text-align:center;padding:10px 0}
 
 /* ── Parent panel ── */
 .pin-wrap{display:flex;gap:8px;margin-top:16px;justify-content:center}
 .pin-input{
-  width:58px;height:58px;border:2px solid #e0dcff;border-radius:14px;
+  width:56px;height:56px;border:2px solid #e0dcff;border-radius:14px;
   font-size:1.4rem;text-align:center;font-weight:800;color:#6C63FF;
   -webkit-appearance:none;outline:none;
 }
 .pin-input:focus{border-color:#6C63FF}
-.tab-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab-bar{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap}
 .tab-btn{
   background:#f0f0ff;color:#6C63FF;border:none;
-  border-radius:10px;padding:8px 13px;font-size:.8rem;font-weight:800;cursor:pointer;
+  border-radius:10px;padding:8px 11px;font-size:.78rem;font-weight:800;cursor:pointer;
 }
 .tab-btn.active{background:#6C63FF;color:#fff}
 .tab-btn:active{transform:scale(.95)}
 
-/* Chore pill rows */
-.chore-pill-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.chore-pill{
-  flex:1;background:#fff;border:1.5px solid #e0dcff;
-  border-radius:10px;padding:9px 12px;
-  font-size:.86rem;font-weight:600;color:#333;
-  display:flex;align-items:center;gap:8px;
+/* Chore editor rows */
+.chore-editor-row{
+  background:#f8f7ff;border-radius:14px;padding:12px;margin-bottom:8px;
 }
-.chore-pill .p-emoji{font-size:1.1rem}
-.del-btn{
-  background:#fff0f0;border:none;border-radius:10px;
-  width:36px;height:36px;font-size:1rem;color:#e05555;
+.chore-row-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.chore-row-emoji{font-size:1.2rem;flex-shrink:0}
+.chore-row-name{font-size:.88rem;font-weight:700;color:#333;flex:1}
+.chore-row-del{
+  background:#fff0f0;border:none;border-radius:8px;
+  width:30px;height:30px;color:#e05555;font-size:.85rem;
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
-.del-btn:active{background:#ffd5d5}
+.chore-row-del:active{background:#ffd5d5}
+
+/* Schedule toggle */
+.sched-toggle{display:flex;gap:6px;margin-bottom:8px}
+.sched-opt{
+  flex:1;background:#fff;border:2px solid #e0dcff;border-radius:10px;
+  padding:7px 4px;font-size:.75rem;font-weight:700;color:#999;
+  cursor:pointer;text-align:center;transition:all .15s;
+}
+.sched-opt.active{background:#6C63FF;border-color:#6C63FF;color:#fff}
+.sched-opt:active{opacity:.8}
+
+/* Day picker */
+.day-picker{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap}
+.day-pill{
+  background:#fff;border:2px solid #e0dcff;border-radius:8px;
+  padding:5px 7px;font-size:.72rem;font-weight:800;color:#999;
+  cursor:pointer;transition:all .15s;min-width:34px;text-align:center;
+}
+.day-pill.active{background:#6C63FF;border-color:#6C63FF;color:#fff}
+.day-pill:active{opacity:.8}
+
+/* Frequency stepper */
+.freq-row{display:flex;align-items:center;gap:8px}
+.freq-row label{font-size:.78rem;font-weight:700;color:#666}
+.freq-stepper{display:flex;align-items:center;gap:8px}
+.freq-btn{
+  background:#e0dcff;border:none;border-radius:8px;
+  width:28px;height:28px;font-size:1rem;font-weight:800;color:#6C63FF;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.freq-btn:active{background:#c8c4f8}
+.freq-val{font-size:.9rem;font-weight:800;color:#333;min-width:24px;text-align:center}
+
+/* Add chore form */
+.add-row{display:flex;gap:7px;margin-top:10px;align-items:center}
+.add-emoji-input{
+  width:44px;border:1.5px solid #e0dcff;border-radius:10px;
+  font-size:1rem;text-align:center;padding:8px 4px;
+}
+.add-text-input{
+  flex:1;border:1.5px solid #e0dcff;border-radius:10px;
+  padding:8px 10px;font-size:.85rem;color:#333;
+}
+.add-emoji-input:focus,.add-text-input:focus,.email-input:focus,.pin-input-single:focus{
+  border-color:#6C63FF;outline:none;
+}
+.add-chore-btn{
+  background:#6C63FF;color:#fff;border:none;border-radius:10px;
+  width:36px;height:36px;font-size:1.1rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.add-chore-btn:active{background:#5550e8}
+
+/* Bonus pill */
+.bonus-pill-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
 .bonus-pill{
   flex:1;background:#fffbea;border:1.5px solid #FFD700;
   border-radius:10px;padding:9px 12px;
   font-size:.86rem;font-weight:600;color:#333;
   display:flex;align-items:center;gap:8px;
 }
-.add-row{display:flex;gap:7px;margin-top:8px;align-items:center}
-.add-emoji-input{
-  width:46px;border:1.5px solid #e0dcff;border-radius:10px;
-  font-size:1.1rem;text-align:center;padding:8px 4px;
+.del-btn{
+  background:#fff0f0;border:none;border-radius:10px;
+  width:34px;height:34px;font-size:.95rem;color:#e05555;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
-.add-text-input{
-  flex:1;border:1.5px solid #e0dcff;border-radius:10px;
-  padding:8px 11px;font-size:.86rem;color:#333;
-}
-.add-emoji-input:focus,.add-text-input:focus,.chance-input:focus,.pin-input-single:focus{border-color:#6C63FF;outline:none}
-.add-chore-btn{
-  background:#6C63FF;color:#fff;border:none;
-  border-radius:10px;width:38px;height:38px;
-  font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.add-chore-btn:active{background:#5550e8}
+.del-btn:active{background:#ffd5d5}
 
-/* Chance row */
-.chance-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.chance-row label{font-size:.83rem;font-weight:700;color:#555}
-.chance-input{
-  width:68px;border:1.5px solid #e0dcff;border-radius:10px;
-  padding:8px 10px;font-size:.9rem;text-align:center;color:#333;
-}
-
-/* Info callout */
+/* Info box */
 .info-box{
-  background:#f0f0ff;border-radius:14px;padding:12px 14px;
-  font-size:.82rem;color:#666;line-height:1.5;margin-bottom:14px;
+  background:#f0f0ff;border-radius:12px;padding:11px 13px;
+  font-size:.8rem;color:#666;line-height:1.5;margin-bottom:12px;
 }
 .info-box strong{color:#6C63FF}
 
-/* PIN single input */
+/* Email input */
+.email-input{
+  width:100%;border:1.5px solid #e0dcff;border-radius:12px;
+  padding:11px 14px;font-size:.9rem;color:#333;margin-top:8px;
+}
+
+/* PIN single */
 .pin-input-single{
   width:110px;border:1.5px solid #e0dcff;border-radius:12px;
-  padding:11px;font-size:1.1rem;text-align:center;color:#333;
+  padding:10px;font-size:1rem;text-align:center;color:#333;
 }
 
 /* ── Toast ── */
@@ -248,7 +313,7 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
 .toast.show{transform:translateX(-50%) translateY(0)}
 
 @media(max-width:360px){
-  h1{font-size:1.55rem}
+  h1{font-size:1.5rem}
   .kid-btn{padding:14px 6px;font-size:.88rem}
 }
 </style>
@@ -262,28 +327,44 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
   <p class="subtitle">Tap your name to see today's chores!</p>
   <span class="date-badge" id="welcome-date"></span>
   <div class="kid-grid" id="kid-grid"></div>
-  <p class="section-label">Today's Full Board</p>
+  <p class="section-label">Today's Board</p>
   <ul class="dash-list" id="dash-welcome"></ul>
-  <button class="btn btn-danger" style="margin-top:14px" onclick="resetDay()">🔄 Re-roll Today's Chores</button>
   <button class="btn btn-secondary" onclick="goParentLogin()">🔐 Parent Settings</button>
 </div>
 
-<!-- ══════ SPIN / REVEAL ══════ -->
+<!-- ══════ REVEAL / CHORES ══════ -->
 <div class="screen" id="screen-spin">
   <div class="hdr">
     <button class="back-btn" onclick="goBack()">←</button>
     <h2 id="spin-kid-title"></h2>
   </div>
+
+  <!-- Regular chores all done -->
+  <div class="all-done-banner" id="all-done-banner">
+    <h3>🎉 Chores Done!</h3>
+    <p id="all-done-msg"></p>
+    <a class="notify-btn" id="notify-link" href="#">📧 Notify Parents</a>
+  </div>
+
+  <!-- Bonus chore done (separate, any day Mon–Fri) -->
+  <div class="all-done-banner bonus-done-banner" id="bonus-done-banner" style="display:none">
+    <h3>⭐ Bonus Complete!</h3>
+    <p>Tap below to let Mom &amp; Dad know!</p>
+    <a class="notify-btn" id="bonus-notify-link" href="#">📧 Submit Bonus Chore</a>
+  </div>
+
   <div class="reveal-box" id="reveal-box">
     <div class="shimmer"></div>
     <span class="slot-emoji" id="slot-emoji">🎲</span>
     <div class="slot-text" id="slot-text">Tap the button to reveal!</div>
-    <span class="bonus-badge" id="slot-badge">⭐ BONUS CHORE!</span>
+    <span class="bonus-badge" id="slot-badge">⭐ BONUS DAY!</span>
     <ul class="chore-list-reveal" id="chore-list-reveal"></ul>
   </div>
+
   <button class="btn btn-primary" id="spin-btn" onclick="doReveal()">🎰 Reveal My Chores!</button>
   <button class="btn btn-secondary" onclick="goBack()">← Back</button>
-  <p class="section-label">Today's Full Board</p>
+
+  <p class="section-label">Today's Board</p>
   <ul class="dash-list" id="dash-spin"></ul>
 </div>
 
@@ -320,12 +401,25 @@ h2{font-size:1.15rem;font-weight:800;color:#333}
 <script>
 'use strict';
 
-// ─── KEYS ──────────────────────────────────────────────────────────
-const KEY_STATE  = 'choreState2';
-const KEY_CONFIG = 'choreConfig2';
-const KEY_PIN    = 'chorePin';
+// ─────────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────────
 
-// ─── DEFAULTS ──────────────────────────────────────────────────────
+const KEY_STATE      = 'choreState3';
+const KEY_CONFIG     = 'choreConfig3';
+const KEY_PIN        = 'chorePin';
+const KEY_WEEK_BONUS = 'choreWeekBonus'; // persists Mon–Fri independently of daily state
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const CHORES_PER_KID = 3;
+const SPIN_MS = 1600;
+
+// ─────────────────────────────────────────────────────────────────
+// DEFAULT CONFIG
+// Chore schedule types:
+//   'fixed'  → appears on specific days (days: [0,1,...6])
+//   'random' → appears N days per week based on frequency (1-7)
+// ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_KIDS = [
   {name:'Carson', avatar:'🎮'},
@@ -334,110 +428,190 @@ const DEFAULT_KIDS = [
   {name:'Monroe', avatar:'🏀'},
 ];
 
-// Master chore pool — parent can edit via settings
 const DEFAULT_CHORES = [
-  {e:'💩', t:'Scoop Poop'},
-  {e:'🛏️', t:'Pick Up Room'},
-  {e:'🪟', t:'Dust Blinds & Furniture'},
-  {e:'🧹', t:'Vacuum Rug & Mop Floor'},
-  {e:'🚿', t:'Clean Bathroom'},
-  {e:'🧽', t:'Wipe Appliances'},
-  {e:'🧹', t:'Clean Mudroom'},
-  {e:'🧹', t:'Dust Living Room'},
-  {e:'🗑️', t:'Bathroom Trash'},
-  {e:'🐕', t:'Bathe Dogs'},
-  {e:'🛁', t:'Change Towels'},
-  {e:'💡', t:'Wipe Lights & Knobs'},
-  {e:'🧻', t:'Restock Toilet Paper'},
-  {e:'🧹', t:'Vacuum Hallway & Stairs'},
-  {e:'🛋️', t:'Vacuum Bonus Room & Straighten Up'},
-  {e:'🍽️', t:'Set & Clear the Table'},
-  {e:'🌿', t:'Water the Plants'},
+  {e:'💩', t:'Scoop Poop',                   schedule:'random', frequency:3},
+  {e:'🛏️', t:'Pick Up Room',                 schedule:'random', frequency:5},
+  {e:'🪟', t:'Dust Blinds & Furniture',       schedule:'random', frequency:3},
+  {e:'🧹', t:'Vacuum Rug & Mop Floor',        schedule:'random', frequency:4},
+  {e:'🚿', t:'Clean Bathroom',                schedule:'random', frequency:4},
+  {e:'🧽', t:'Wipe Appliances',               schedule:'random', frequency:2},
+  {e:'🧹', t:'Clean Mudroom',                 schedule:'random', frequency:2},
+  {e:'🧹', t:'Dust Living Room',              schedule:'random', frequency:2},
+  {e:'🗑️', t:'Bathroom Trash',               schedule:'fixed',  days:[1,4]},
+  {e:'🐕', t:'Bathe Dogs',                    schedule:'fixed',  days:[3,6]},
+  {e:'🛁', t:'Change Towels',                 schedule:'fixed',  days:[1]},
+  {e:'💡', t:'Wipe Lights & Knobs',           schedule:'random', frequency:1},
+  {e:'🧻', t:'Restock Toilet Paper',          schedule:'random', frequency:1},
+  {e:'🧹', t:'Vacuum Hallway & Stairs',       schedule:'fixed',  days:[6]},
+  {e:'🛋️', t:'Vacuum Bonus Room',            schedule:'fixed',  days:[6]},
+  {e:'🍽️', t:'Set & Clear the Table',        schedule:'random', frequency:5},
+  {e:'🌿', t:'Water the Plants',              schedule:'fixed',  days:[1,5]},
 ];
 
 const DEFAULT_BONUS = [
   {e:'💵', t:'Earn $5!'},
   {e:'🎮', t:'Extra Screen Time!'},
-  {e:'🍦', t:'Pick Tonight\'s Dessert!'},
-  {e:'🎬', t:'Choose the Movie Tonight!'},
-  {e:'😴', t:'Free Pass — Skip a Chore Day!'},
+  {e:'🍦', t:"Pick Tonight's Dessert!"},
+  {e:'🎬', t:'Choose the Movie!'},
+  {e:'😴', t:'Free Pass — Skip a Chore!'},
 ];
 
-const DEFAULT_BONUS_CHANCE = 20; // % chance any given day has a bonus kid
-const CHORES_PER_KID = 3;
-const SPIN_MS = 1700;
-
-// ─── CONFIG ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// CONFIG HELPERS
+// ─────────────────────────────────────────────────────────────────
 
 function getConfig() {
   try {
     const raw = localStorage.getItem(KEY_CONFIG);
     if (raw) return JSON.parse(raw);
   } catch {}
-  return { kids: DEFAULT_KIDS, chores: DEFAULT_CHORES, bonus: DEFAULT_BONUS, bonusChance: DEFAULT_BONUS_CHANCE };
+  return {
+    kids: DEFAULT_KIDS,
+    chores: DEFAULT_CHORES,
+    bonus: DEFAULT_BONUS,
+    parentEmail: '',
+  };
+}
+function saveConfig(cfg) { localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg)); }
+
+// ─────────────────────────────────────────────────────────────────
+// WEEKLY BONUS STATE
+// Generated on Monday, persists through Friday (Sat/Sun = no bonus).
+// Stored separately from daily state so checking off a bonus chore
+// survives the nightly daily-state reset.
+// ─────────────────────────────────────────────────────────────────
+
+function getWeekBonus() {
+  const dayIdx = new Date().getDay();
+  // Only show bonus Mon (1) through Fri (5)
+  if (dayIdx === 0 || dayIdx === 6) return null;
+
+  try {
+    const raw = localStorage.getItem(KEY_WEEK_BONUS);
+    if (raw) {
+      const wb = JSON.parse(raw);
+      if (wb.weekId === weekId()) return wb; // still this week
+    }
+  } catch {}
+
+  // Generate fresh bonus assignments for this week
+  return generateWeekBonus(getConfig());
 }
 
-function saveConfig(cfg) {
-  localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg));
+function generateWeekBonus(cfg) {
+  const bonuses = {};
+  cfg.kids.forEach((kid, i) => {
+    if (!cfg.bonus.length) { bonuses[kid.name] = null; return; }
+    const seed = strSeed(`${weekId()}-bonus-${kid.name}-${i}`);
+    const idx  = Math.floor(seededRandFloat(seed) * cfg.bonus.length);
+    bonuses[kid.name] = { ...cfg.bonus[idx], done: false, notified: false };
+  });
+  const wb = { weekId: weekId(), bonuses };
+  localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
+  return wb;
 }
 
-// ─── DAILY STATE ───────────────────────────────────────────────────
-// State shape:
-// {
-//   date: 'YYYY-MM-DD',
-//   assignments: { [kidName]: [ {e,t}, {e,t}, {e,t} ] },
-//   bonusKid: kidName | null,     ← which kid gets a bonus today (null = nobody)
-//   bonusChore: {e,t} | null,     ← the bonus chore object
-//   revealed: { [kidName]: bool } ← whether kid has tapped to see theirs
-// }
+function saveWeekBonus(wb) { localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb)); }
 
-function todayStr() { return new Date().toISOString().slice(0,10); }
+// ─────────────────────────────────────────────────────────────────
+// SEEDED RNG — deterministic per week so the same day always gives
+// the same chore assignments even if the page is refreshed
+// ─────────────────────────────────────────────────────────────────
 
-/**
- * Seeded shuffle using a simple mulberry32 PRNG so the same day
- * always produces the same assignment if needed. But we re-roll on
- * explicit reset, so we just use Math.random() for freshness.
- */
-function shuffle(arr) {
+function strSeed(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = Math.imul(31, h) + s.charCodeAt(i) | 0; }
+  return Math.abs(h);
+}
+
+function seededRandFloat(seed) {
+  // mulberry32
+  seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+  let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+
+function seededShuffle(arr, seed) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    seed = strSeed(seed + i);
+    const j = Math.floor(seededRandFloat(seed) * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-function generateDayState(cfg) {
-  const kids    = cfg.kids;
-  const n       = kids.length;           // 4
-  const needed  = n * CHORES_PER_KID;   // 12
+// ISO week identifier: "2025-W22"
+function weekId() {
+  const d = new Date();
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil((((d - jan1) / 86400000) + jan1.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${week}`;
+}
 
-  // Shuffle chore pool; if fewer than needed, cycle the pool
-  let pool = shuffle(cfg.chores);
-  while (pool.length < needed) pool = [...pool, ...shuffle(cfg.chores)];
-  pool = pool.slice(0, needed);
+// ─────────────────────────────────────────────────────────────────
+// CHORE POOL FOR TODAY
+// Fixed chores: always in pool on their designated days
+// Random chores: seeded by week+choreIndex to appear on N days this week
+// ─────────────────────────────────────────────────────────────────
 
-  // Assign CHORES_PER_KID to each kid in order
-  const kidOrder = shuffle([...kids]); // randomise who gets which slice
-  const assignments = {};
-  kidOrder.forEach((kid, i) => {
-    assignments[kid.name] = pool.slice(i * CHORES_PER_KID, (i + 1) * CHORES_PER_KID);
+function getTodayPool(cfg) {
+  const dayIdx = new Date().getDay();
+  const wid    = weekId();
+  const pool   = [];
+
+  cfg.chores.forEach((chore, idx) => {
+    if (chore.schedule === 'fixed') {
+      if ((chore.days || []).includes(dayIdx)) pool.push(chore);
+    } else {
+      // Random: pick 'frequency' days this week using seeded shuffle
+      const freq     = Math.min(Math.max(chore.frequency || 1, 1), 7);
+      const seed     = strSeed(`${wid}-${idx}-${chore.t}`);
+      const active   = seededShuffle([0,1,2,3,4,5,6], seed).slice(0, freq);
+      if (active.includes(dayIdx)) pool.push(chore);
+    }
   });
 
-  // Bonus: roll once for the whole day
-  const hasBonus   = Math.random() * 100 < cfg.bonusChance;
-  const bonusKid   = hasBonus
-    ? kids[Math.floor(Math.random() * kids.length)].name
-    : null;
-  const bonusChore = (hasBonus && cfg.bonus.length)
-    ? cfg.bonus[Math.floor(Math.random() * cfg.bonus.length)]
-    : null;
+  return pool;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DAILY STATE GENERATION
+// ─────────────────────────────────────────────────────────────────
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+function generateDayState(cfg) {
+  const kids = cfg.kids;
+
+  // Build today's chore pool
+  let pool = getTodayPool(cfg);
+
+  // Need kids.length × CHORES_PER_KID slots. Repeat pool if too small.
+  const needed = kids.length * CHORES_PER_KID;
+  while (pool.length < needed) pool = [...pool, ...pool];
+  pool = pool.slice(0, needed);
+
+  // Seeded shuffle — same day always yields same assignments
+  const shuffled = seededShuffle(pool, strSeed(`${todayStr()}-assign`));
+  const kidOrder = seededShuffle([...kids], strSeed(`${todayStr()}-kids`));
+
+  const assignments = {};
+  kidOrder.forEach((kid, i) => {
+    assignments[kid.name] = shuffled
+      .slice(i * CHORES_PER_KID, (i + 1) * CHORES_PER_KID)
+      .map(c => ({ e: c.e, t: c.t, done: false }));
+  });
 
   // Revealed flags
   const revealed = {};
   kids.forEach(k => { revealed[k.name] = false; });
 
-  return { date: todayStr(), assignments, bonusKid, bonusChore, revealed };
+  // Bonus chores are managed separately in weekly state (see getWeekBonus)
+  const s = { date: todayStr(), assignments, revealed };
+  localStorage.setItem(KEY_STATE, JSON.stringify(s));
+  return s;
 }
 
 function getState() {
@@ -448,18 +622,14 @@ function getState() {
       if (s.date === todayStr()) return s;
     }
   } catch {}
-  // New day or no state → generate fresh
-  const cfg   = getConfig();
-  const fresh = generateDayState(cfg);
-  localStorage.setItem(KEY_STATE, JSON.stringify(fresh));
-  return fresh;
+  return generateDayState(getConfig());
 }
 
-function saveState(s) {
-  localStorage.setItem(KEY_STATE, JSON.stringify(s));
-}
+function saveState(s) { localStorage.setItem(KEY_STATE, JSON.stringify(s)); }
 
-// ─── NAV ───────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// NAV
+// ─────────────────────────────────────────────────────────────────
 
 let currentKid  = null;
 let activeTab   = null;
@@ -477,66 +647,78 @@ function goBack() {
   showScreen(prev);
 }
 
-// ─── WELCOME ───────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// WELCOME
+// ─────────────────────────────────────────────────────────────────
 
 function renderWelcome() {
-  const cfg   = getConfig();
-  const state = getState();
-  const grid  = document.getElementById('kid-grid');
+  const cfg    = getConfig();
+  const state  = getState();
+  const wb     = getWeekBonus(); // weekly bonus — null on weekends
+  const dayIdx = new Date().getDay();
+  // Show gold ring Mon–Fri when a weekly bonus exists
+  const isBonusWeek = wb !== null && dayIdx >= 1 && dayIdx <= 5;
 
-  // Date label
-  const d = new Date();
   document.getElementById('welcome-date').textContent =
-    d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+    new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
 
-  grid.innerHTML = cfg.kids.map(kid => {
-    const done     = state.revealed[kid.name];
-    const isBonus  = state.bonusKid === kid.name;
-    return `<button class="kid-btn ${isBonus ? 'bonus-kid' : ''}"
+  document.getElementById('kid-grid').innerHTML = cfg.kids.map(kid => {
+    const chores       = state.assignments[kid.name] || [];
+    const regularDone  = chores.every(c => c.done);
+    const bonus        = wb?.bonuses?.[kid.name];
+    const bonusDone    = !bonus || bonus.done;
+    return `<button class="kid-btn ${regularDone ? 'is-done' : ''} ${isBonusWeek ? 'is-monday' : ''}"
                     onclick="selectKid('${kid.name}')">
       <span class="av">${kid.avatar}</span>
       ${kid.name}
-      ${done  ? `<span class="done-tag">✅ Seen!</span>` : ''}
-      ${isBonus && !done ? `<span class="done-tag">⭐ Bonus day!</span>` : ''}
+      ${regularDone ? `<span class="tag">✅ Chores Done!</span>` : ''}
+      ${isBonusWeek && !bonusDone ? `<span class="tag">⭐ Bonus!</span>` : ''}
+      ${isBonusWeek && bonusDone  ? `<span class="tag">🌟 Bonus Done!</span>` : ''}
     </button>`;
   }).join('');
 
-  renderDash('dash-welcome', cfg, state);
+  renderDash('dash-welcome', cfg, state, wb);
 }
 
-// ─── DASHBOARD ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// DASHBOARD
+// ─────────────────────────────────────────────────────────────────
 
-function renderDash(elId, cfg, state) {
+function renderDash(elId, cfg, state, wb) {
   const el = document.getElementById(elId);
-  if (!state.assignments) { el.innerHTML = '<li class="no-dash">Roll chores to get started!</li>'; return; }
-
   el.innerHTML = cfg.kids.map(kid => {
-    const hasRevealed = state.revealed[kid.name];
-    const chores      = state.assignments[kid.name] || [];
-    const isBonus     = state.bonusKid === kid.name;
-
-    if (!hasRevealed) {
-      // Hide chores until the kid taps their name and reveals
+    if (!state.revealed[kid.name]) {
       return `<li class="dash-item">
         <span class="av-sm">${kid.avatar}</span>
         <span class="kid-lbl">${kid.name}</span>
         <span class="chore-lbl" style="color:#ccc;font-style:italic">🔒 Not revealed yet</span>
       </li>`;
     }
+    const chores      = state.assignments[kid.name] || [];
+    const bonus       = wb?.bonuses?.[kid.name] || null;
+    const regularDone = chores.every(c => c.done);
+    const doneCount   = chores.filter(c => c.done).length;
 
-    const bonusPart = isBonus && state.bonusChore
-      ? ` <span style="color:#e6a000">· ${state.bonusChore.e} ${state.bonusChore.t} ⭐</span>`
+    const choreText = chores.map(c =>
+      `<span style="${c.done ? 'text-decoration:line-through;color:#bbb' : ''}">${c.e} ${c.t}</span>`
+    ).join(' · ');
+    const bonusPart = bonus
+      ? ` · <span style="color:#e6a000;${bonus.done ? 'text-decoration:line-through;opacity:.5' : ''}">${bonus.e} ${bonus.t} ⭐</span>`
       : '';
-    const choreText = chores.map(c => `${c.e} ${c.t}`).join(' · ');
-    return `<li class="dash-item ${isBonus ? 'is-bonus' : ''}">
+
+    return `<li class="dash-item ${regularDone ? 'is-done-dash' : ''} ${bonus ? 'is-bonus-dash' : ''}">
       <span class="av-sm">${kid.avatar}</span>
       <span class="kid-lbl">${kid.name}</span>
-      <span class="chore-lbl">${choreText}${bonusPart}</span>
+      <span class="chore-lbl">${choreText}${bonusPart}
+        <span style="color:#6C63FF;font-weight:700;margin-left:4px">(${doneCount}/${chores.length})</span>
+      </span>
     </li>`;
   }).join('');
 }
 
-// ─── SELECT KID ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// SELECT KID → SPIN SCREEN
+// ─────────────────────────────────────────────────────────────────
 
 function selectKid(name) {
   const cfg  = getConfig();
@@ -548,60 +730,172 @@ function selectKid(name) {
 function renderSpinScreen() {
   const cfg   = getConfig();
   const state = getState();
+  const wb    = getWeekBonus();
   const slotEmoji = document.getElementById('slot-emoji');
   const slotText  = document.getElementById('slot-text');
   const slotBadge = document.getElementById('slot-badge');
   const choreLst  = document.getElementById('chore-list-reveal');
   const spinBtn   = document.getElementById('spin-btn');
+  const banner    = document.getElementById('all-done-banner');
 
   document.getElementById('spin-kid-title').textContent =
     `${currentKid.avatar} ${currentKid.name}'s Chores`;
 
+  banner.style.display = 'none';
+  document.getElementById('bonus-done-banner').style.display = 'none';
+
+  const bonus = wb?.bonuses?.[currentKid.name] || null;
+  // Show the bonus badge in the reveal box only if there's an active bonus this week
+  slotBadge.style.display = 'none';
+
   if (state.revealed[currentKid.name]) {
-    // Already seen — just show result
-    const chores  = state.assignments[currentKid.name] || [];
-    const isBonus = state.bonusKid === currentKid.name;
+    const chores = state.assignments[currentKid.name] || [];
     slotEmoji.textContent = currentKid.avatar;
     slotEmoji.className   = 'slot-emoji';
     slotText.textContent  = '';
-    slotBadge.style.display = isBonus ? 'inline-block' : 'none';
-    buildChoreList(chores, isBonus ? state.bonusChore : null);
+    if (bonus) slotBadge.style.display = 'inline-block';
+    buildChoreList(chores, bonus);
     choreLst.style.display = 'block';
     spinBtn.disabled    = true;
     spinBtn.textContent = '✅ Already revealed today!';
+    checkAllDone(state, cfg);
+    checkBonusDone(wb, cfg);
   } else {
     slotEmoji.textContent = '🎲';
     slotEmoji.className   = 'slot-emoji';
     slotText.textContent  = 'Tap the button to reveal!';
-    slotBadge.style.display = 'none';
     choreLst.style.display  = 'none';
     choreLst.innerHTML      = '';
     spinBtn.disabled    = false;
     spinBtn.textContent = '🎰 Reveal My Chores!';
   }
 
-  renderDash('dash-spin', cfg, state);
+  renderDash('dash-spin', cfg, state, wb);
 }
+
+// ─────────────────────────────────────────────────────────────────
+// BUILD CHORE LIST WITH CHECKBOXES
+// ─────────────────────────────────────────────────────────────────
 
 function buildChoreList(chores, bonusChore) {
   const ul = document.getElementById('chore-list-reveal');
-  ul.innerHTML = chores.map(c =>
-    `<li><span class="c-emoji">${c.e}</span>${c.t}</li>`
-  ).join('');
+  ul.innerHTML = '';
+
+  // Regular chores — tapping toggles done
+  chores.forEach((chore, i) => {
+    const li = document.createElement('li');
+    li.className = `chore-item${chore.done ? ' is-done' : ''}`;
+    li.innerHTML = `
+      <span class="c-emoji">${chore.e}</span>
+      <span class="c-text">${chore.t}</span>
+      <span class="check-circle">${chore.done ? '✓' : ''}</span>`;
+    li.addEventListener('click', () => toggleChore(i, false));
+    ul.appendChild(li);
+  });
+
+  // Bonus chore — rendered in its own section, separate notify flow
   if (bonusChore) {
-    ul.innerHTML += `<li class="bonus-chore-item"><span class="c-emoji">${bonusChore.e}</span>${bonusChore.t} — <strong>BONUS! ⭐</strong></li>`;
+    // Divider
+    const div = document.createElement('li');
+    div.style.cssText = 'list-style:none;padding:8px 0 4px;font-size:.72rem;font-weight:800;color:#e6a000;letter-spacing:.5px;text-transform:uppercase;background:none;box-shadow:none';
+    div.textContent = '⭐ This Week\'s Bonus Chore (due Friday)';
+    ul.appendChild(div);
+
+    const li = document.createElement('li');
+    li.className = `chore-item bonus-item${bonusChore.done ? ' is-done' : ''}`;
+    li.innerHTML = `
+      <span class="c-emoji">${bonusChore.e}</span>
+      <span class="c-text">${bonusChore.t}</span>
+      <span class="check-circle">${bonusChore.done ? '✓' : ''}</span>`;
+    li.addEventListener('click', () => toggleChore(0, true));
+    ul.appendChild(li);
   }
 }
 
-// ─── REVEAL ANIMATION ──────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// TOGGLE CHORE DONE
+// ─────────────────────────────────────────────────────────────────
+
+function toggleChore(idx, isBonus) {
+  const cfg   = getConfig();
+  const state = getState();
+  const wb    = getWeekBonus();
+
+  if (isBonus) {
+    // Toggle in weekly bonus state (persists across days)
+    if (wb?.bonuses?.[currentKid.name]) {
+      wb.bonuses[currentKid.name].done = !wb.bonuses[currentKid.name].done;
+      saveWeekBonus(wb);
+    }
+  } else {
+    // Toggle in daily state
+    state.assignments[currentKid.name][idx].done =
+      !state.assignments[currentKid.name][idx].done;
+    saveState(state);
+  }
+
+  const chores = state.assignments[currentKid.name];
+  const bonus  = wb?.bonuses?.[currentKid.name] || null;
+  buildChoreList(chores, bonus);
+  renderDash('dash-spin', cfg, state, wb);
+  checkAllDone(state, cfg);
+  checkBonusDone(wb, cfg);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ALL-DONE CHECK + NOTIFY BUTTON
+// ─────────────────────────────────────────────────────────────────
+
+// Regular chores all done → show main "All Done" banner + notify parents
+function checkAllDone(state, cfg) {
+  const chores    = state.assignments[currentKid.name] || [];
+  const allDone   = chores.every(c => c.done);
+  const banner    = document.getElementById('all-done-banner');
+  const msg       = document.getElementById('all-done-msg');
+  const link      = document.getElementById('notify-link');
+
+  if (!allDone) { banner.style.display = 'none'; return; }
+
+  banner.style.display = 'block';
+  msg.textContent = `${currentKid.name} finished all ${chores.length} chores today! 🙌`;
+
+  const d = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const choreLines = chores.map(c => `• ${c.e} ${c.t}`).join('\n');
+  const subject = encodeURIComponent(`✅ ${currentKid.name} finished their chores!`);
+  const body = encodeURIComponent(
+    `Hi!\n\n${currentKid.name} completed all their chores on ${d}:\n\n${choreLines}\n\nGreat job! 🎉`
+  );
+  link.href = `mailto:${cfg.parentEmail || ''}?subject=${subject}&body=${body}`;
+
+  spawnConfetti(document.getElementById('reveal-box'), 14);
+}
+
+// Bonus chore done → show separate bonus banner
+function checkBonusDone(wb, cfg) {
+  const bonusBanner = document.getElementById('bonus-done-banner');
+  const bonusLink   = document.getElementById('bonus-notify-link');
+  if (!bonusBanner) return;
+
+  const bonus = wb?.bonuses?.[currentKid.name];
+  if (!bonus || !bonus.done) { bonusBanner.style.display = 'none'; return; }
+
+  bonusBanner.style.display = 'block';
+
+  const subject = encodeURIComponent(`⭐ ${currentKid.name} completed their bonus chore!`);
+  const body = encodeURIComponent(
+    `Hi!\n\n${currentKid.name} completed their bonus chore this week:\n\n• ${bonus.e} ${bonus.t}\n\nAwesome work! 🌟`
+  );
+  bonusLink.href = `mailto:${cfg.parentEmail || ''}?subject=${subject}&body=${body}`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SPIN / REVEAL ANIMATION
+// ─────────────────────────────────────────────────────────────────
 
 function doReveal() {
-  const state   = getState();
-  const cfg     = getConfig();
+  const cfg   = getConfig();
+  const state = getState();
   if (state.revealed[currentKid.name]) return;
-
-  const chores  = state.assignments[currentKid.name] || [];
-  const isBonus = state.bonusKid === currentKid.name;
 
   const spinBtn   = document.getElementById('spin-btn');
   const revealBox = document.getElementById('reveal-box');
@@ -625,37 +919,38 @@ function doReveal() {
     count++;
     if (count >= total) {
       clearInterval(cycle);
-
-      // Mark revealed
       state.revealed[currentKid.name] = true;
       saveState(state);
 
-      // Show result
+      const chores = state.assignments[currentKid.name] || [];
+      const wb     = getWeekBonus();
+      const bonus  = wb?.bonuses?.[currentKid.name] || null;
+
       revealBox.classList.remove('is-spinning');
       slotEmoji.className   = 'slot-emoji result';
       slotEmoji.textContent = currentKid.avatar;
       slotText.textContent  = '';
 
       const slotBadge = document.getElementById('slot-badge');
-      slotBadge.style.display = isBonus ? 'inline-block' : 'none';
+      slotBadge.style.display = bonus ? 'inline-block' : 'none';
 
-      buildChoreList(chores, isBonus ? state.bonusChore : null);
+      buildChoreList(chores, bonus);
       choreLst.style.display = 'block';
+      spawnConfetti(revealBox, bonus ? 22 : 12);
 
-      spawnConfetti(revealBox, isBonus ? 24 : 12);
-      renderDash('dash-spin', cfg, state);
-
+      renderDash('dash-spin', cfg, state, wb);
+      checkAllDone(state, cfg);
+      checkBonusDone(wb, cfg);
       spinBtn.disabled    = true;
       spinBtn.textContent = '✅ Chores revealed!';
-
-      showToast(isBonus
-        ? `🌟 Lucky! ${currentKid.name} got a BONUS chore today!`
-        : `🎉 ${currentKid.name}'s chores are set!`, 3000);
+      showToast(bonus ? `⭐ ${currentKid.name} has a bonus chore this week!` : `🎉 ${currentKid.name}'s chores are set!`, 2800);
     }
   }, 130);
 }
 
-// ─── CONFETTI ──────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// CONFETTI
+// ─────────────────────────────────────────────────────────────────
 
 function spawnConfetti(container, count) {
   const colors = ['#6C63FF','#3ECFCF','#FFD700','#FF6B6B','#A8E6CF'];
@@ -668,36 +963,25 @@ function spawnConfetti(container, count) {
   }
 }
 
-// ─── RESET ─────────────────────────────────────────────────────────
-
-function resetDay() {
-  if (!confirm('Re-roll all chores for today? This randomises new assignments.')) return;
-  const cfg   = getConfig();
-  const fresh = generateDayState(cfg);
-  saveState(fresh);
-  showToast('🎲 New chores rolled!');
-  renderWelcome();
-}
-
-// ─── PARENT PIN ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// PARENT PIN
+// ─────────────────────────────────────────────────────────────────
 
 function goParentLogin() {
-  ['p0','p1','p2','p3'].forEach(id => { document.getElementById(id).value = ''; });
+  ['p0','p1','p2','p3'].forEach(id => { document.getElementById(id).value=''; });
   screenStack = ['screen-welcome','screen-pin'];
   showScreen('screen-pin');
   setTimeout(()=>document.getElementById('p0').focus(), 100);
 }
-
 function pinNext(idx) {
   const val = document.getElementById(`p${idx}`).value;
-  if (val.length === 1 && idx < 3) document.getElementById(`p${idx+1}`).focus();
-  if (idx === 3 && val.length === 1) checkPin();
+  if (val.length===1 && idx<3) document.getElementById(`p${idx+1}`).focus();
+  if (idx===3 && val.length===1) checkPin();
 }
-
 function checkPin() {
   const entered = ['p0','p1','p2','p3'].map(id=>document.getElementById(id).value).join('');
   const stored  = localStorage.getItem(KEY_PIN) || '1234';
-  if (entered === stored) {
+  if (entered===stored) {
     screenStack.push('screen-parent');
     renderParentPanel();
     showScreen('screen-parent');
@@ -708,11 +992,12 @@ function checkPin() {
   }
 }
 
-// ─── PARENT PANEL ──────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// PARENT PANEL
+// ─────────────────────────────────────────────────────────────────
 
 function renderParentPanel(tab) {
-  const cfg  = getConfig();
-  const tabs = ['📋 Chore List', '⭐ Bonus', '🔑 PIN'];
+  const tabs = ['📋 Chores', '⭐ Bonus', '📧 Notify', '🔑 PIN'];
   if (!tab) tab = activeTab || tabs[0];
   activeTab = tab;
 
@@ -721,64 +1006,120 @@ function renderParentPanel(tab) {
   ).join('');
 
   const editor = document.getElementById('parent-editor');
-  if (tab === '📋 Chore List') renderChoreListEditor(editor, cfg);
-  else if (tab === '⭐ Bonus')  renderBonusEditor(editor, cfg);
-  else                          renderPinEditor(editor);
+  if      (tab==='📋 Chores') renderChoreEditor(editor);
+  else if (tab==='⭐ Bonus')  renderBonusEditor(editor);
+  else if (tab==='📧 Notify') renderNotifyEditor(editor);
+  else                        renderPinEditor(editor);
 }
 
-// ── Master chore list editor ──
-function renderChoreListEditor(editor, cfg) {
-  const total   = cfg.chores.length;
-  const kids    = cfg.kids.length;
-  const canMake = Math.floor(total / kids); // chores per kid if divided evenly
+// ─────────────────────────────────────────────────────────────────
+// CHORE EDITOR
+// Each chore has: emoji, name, schedule (fixed|random), days[] or frequency
+// ─────────────────────────────────────────────────────────────────
 
+function renderChoreEditor(editor) {
+  const cfg = getConfig();
   let html = `
     <div class="info-box">
-      You have <strong>${total} chores</strong> in the pool. With <strong>${kids} kids</strong> getting
-      <strong>${CHORES_PER_KID} chores each</strong>, the app needs at least <strong>${kids * CHORES_PER_KID}</strong>.
-      ${total < kids * CHORES_PER_KID
-        ? `<span style="color:#e05555">⚠️ Add more chores — some will repeat!</span>`
-        : `✅ Pool is large enough.`}
+      <strong>${cfg.chores.length} chores</strong> in the pool.
+      <strong>Fixed</strong> chores always appear on set days.
+      <strong>Random</strong> chores appear a set number of days per week.
     </div>
-    <div id="chore-pills">`;
+    <div id="chore-editor-list">`;
 
   cfg.chores.forEach((c, i) => {
+    const isFixed = c.schedule === 'fixed';
+    const freq    = c.frequency || 1;
+
+    // Day pills for fixed
+    const dayPills = DAYS_SHORT.map((d, di) =>
+      `<span class="day-pill ${(c.days||[]).includes(di)?'active':''}"
+             onclick="toggleChorDay(${i},${di})">${d}</span>`
+    ).join('');
+
     html += `
-      <div class="chore-pill-row">
-        <div class="chore-pill"><span class="p-emoji">${c.e}</span>${c.t}</div>
-        <button class="del-btn" onclick="deleteChore(${i})">✕</button>
-      </div>`;
+    <div class="chore-editor-row" id="crow-${i}">
+      <div class="chore-row-top">
+        <span class="chore-row-emoji">${c.e}</span>
+        <span class="chore-row-name">${c.t}</span>
+        <button class="chore-row-del" onclick="deleteChore(${i})">✕</button>
+      </div>
+      <!-- Schedule type toggle -->
+      <div class="sched-toggle">
+        <div class="sched-opt ${isFixed?'active':''}"  onclick="setChoreSchedule(${i},'fixed')">📅 Fixed Days</div>
+        <div class="sched-opt ${!isFixed?'active':''}" onclick="setChoreSchedule(${i},'random')">🎲 Random</div>
+      </div>
+      <!-- Fixed: day picker -->
+      <div id="fixed-opts-${i}" style="display:${isFixed?'block':'none'}">
+        <div class="day-picker">${dayPills}</div>
+      </div>
+      <!-- Random: frequency stepper -->
+      <div id="rand-opts-${i}" class="freq-row" style="display:${!isFixed?'flex':'none'}">
+        <label>Days/week:</label>
+        <div class="freq-stepper">
+          <button class="freq-btn" onclick="changeFreq(${i},-1)">−</button>
+          <span class="freq-val" id="freq-val-${i}">${freq}</span>
+          <button class="freq-btn" onclick="changeFreq(${i},+1)">+</button>
+        </div>
+      </div>
+    </div>`;
   });
 
   html += `</div>
-    <div class="add-row" style="margin-top:12px">
-      <input class="add-emoji-input" id="new-chore-emoji" placeholder="🧹" maxlength="2"/>
-      <input class="add-text-input"  id="new-chore-text"  placeholder="Add chore to pool…"
+    <div class="add-row">
+      <input class="add-emoji-input" id="new-e" placeholder="🧹" maxlength="2"/>
+      <input class="add-text-input"  id="new-t" placeholder="New chore…"
              onkeydown="if(event.key==='Enter')addChore()"/>
       <button class="add-chore-btn" onclick="addChore()">+</button>
     </div>
-    <button class="btn btn-danger" style="margin-top:14px" onclick="resetDay()">🎲 Re-roll Today's Assignments</button>`;
+    <button class="btn btn-danger" style="margin-top:12px" onclick="rerollDay()">🎲 Re-roll Today's Assignments</button>`;
 
   editor.innerHTML = html;
 }
 
-function addChore() {
-  const emojiEl = document.getElementById('new-chore-emoji');
-  const textEl  = document.getElementById('new-chore-text');
-  const emoji   = emojiEl.value.trim() || '✅';
-  const text    = textEl.value.trim();
-  if (!text) { showToast('Enter a chore name!'); return; }
+function setChoreSchedule(idx, type) {
   const cfg = getConfig();
-  cfg.chores.push({e:emoji, t:text});
+  cfg.chores[idx].schedule = type;
+  if (type === 'fixed' && !cfg.chores[idx].days) cfg.chores[idx].days = [];
   saveConfig(cfg);
-  emojiEl.value = '';
-  textEl.value  = '';
   renderParentPanel(activeTab);
-  showToast(`Added: ${text}`);
+}
+
+function toggleChorDay(choreIdx, dayIdx) {
+  const cfg  = getConfig();
+  const days = cfg.chores[choreIdx].days || [];
+  const pos  = days.indexOf(dayIdx);
+  if (pos >= 0) days.splice(pos, 1); else days.push(dayIdx);
+  cfg.chores[choreIdx].days = days;
+  saveConfig(cfg);
+  renderParentPanel(activeTab);
+}
+
+function changeFreq(choreIdx, delta) {
+  const cfg = getConfig();
+  const cur = cfg.chores[choreIdx].frequency || 1;
+  cfg.chores[choreIdx].frequency = Math.min(Math.max(cur + delta, 1), 7);
+  saveConfig(cfg);
+  const el = document.getElementById(`freq-val-${choreIdx}`);
+  if (el) el.textContent = cfg.chores[choreIdx].frequency;
+}
+
+function addChore() {
+  const eEl = document.getElementById('new-e');
+  const tEl = document.getElementById('new-t');
+  const e   = eEl.value.trim() || '✅';
+  const t   = tEl.value.trim();
+  if (!t) { showToast('Enter a chore name!'); return; }
+  const cfg = getConfig();
+  cfg.chores.push({e, t, schedule:'random', frequency:2});
+  saveConfig(cfg);
+  eEl.value = ''; tEl.value = '';
+  renderParentPanel(activeTab);
+  showToast(`Added: ${t}`);
 }
 
 function deleteChore(i) {
-  if (!confirm('Remove this chore from the pool?')) return;
+  if (!confirm('Remove this chore?')) return;
   const cfg = getConfig();
   cfg.chores.splice(i, 1);
   saveConfig(cfg);
@@ -786,31 +1127,39 @@ function deleteChore(i) {
   showToast('Chore removed');
 }
 
-// ── Bonus editor ──
-function renderBonusEditor(editor, cfg) {
+function rerollDay() {
+  if (!confirm('Re-roll all assignments for today?')) return;
+  const cfg   = getConfig();
+  const fresh = generateDayState(cfg);
+  saveState(fresh);
+  showToast('🎲 New assignments rolled!');
+  renderParentPanel(activeTab);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// BONUS EDITOR
+// ─────────────────────────────────────────────────────────────────
+
+function renderBonusEditor(editor) {
+  const cfg = getConfig();
   let html = `
-    <div class="chance-row">
-      <label>Chance a kid gets a bonus today:</label>
-      <input class="chance-input" type="number" id="bonus-chance-val"
-             min="0" max="100" value="${cfg.bonusChance}"/>
-      <span style="color:#888;font-size:.82rem">%</span>
-      <button class="btn btn-primary btn-sm" onclick="saveBonusChance()">Save</button>
+    <div class="info-box">
+      Every <strong>Monday</strong>, each kid automatically gets one bonus reward from this pool.
     </div>
-    <p class="section-label">Bonus Reward Pool</p>
-    <div id="bonus-pills">`;
+    <p class="section-label">Bonus Reward Pool</p>`;
 
   cfg.bonus.forEach((b, i) => {
     html += `
-      <div class="chore-pill-row">
-        <div class="bonus-pill"><span class="p-emoji">${b.e}</span>${b.t}</div>
+      <div class="bonus-pill-row">
+        <div class="bonus-pill"><span style="font-size:1.1rem">${b.e}</span>${b.t}</div>
         <button class="del-btn" onclick="deleteBonus(${i})">✕</button>
       </div>`;
   });
 
-  html += `</div>
+  html += `
     <div class="add-row" style="margin-top:10px">
-      <input class="add-emoji-input" id="new-bonus-emoji" placeholder="⭐" maxlength="2"/>
-      <input class="add-text-input"  id="new-bonus-text"  placeholder="Add bonus reward…"
+      <input class="add-emoji-input" id="bonus-e" placeholder="⭐" maxlength="2"/>
+      <input class="add-text-input"  id="bonus-t" placeholder="Add bonus reward…"
              onkeydown="if(event.key==='Enter')addBonus()"/>
       <button class="add-chore-btn" style="background:#FFD700" onclick="addBonus()">+</button>
     </div>`;
@@ -818,28 +1167,18 @@ function renderBonusEditor(editor, cfg) {
   editor.innerHTML = html;
 }
 
-function saveBonusChance() {
-  const val = parseFloat(document.getElementById('bonus-chance-val').value);
-  if (isNaN(val)||val<0||val>100) { showToast('Enter 0–100'); return; }
-  const cfg = getConfig();
-  cfg.bonusChance = val;
-  saveConfig(cfg);
-  showToast(`Bonus chance: ${val}%`);
-}
-
 function addBonus() {
-  const emojiEl = document.getElementById('new-bonus-emoji');
-  const textEl  = document.getElementById('new-bonus-text');
-  const emoji   = emojiEl.value.trim() || '⭐';
-  const text    = textEl.value.trim();
-  if (!text) { showToast('Enter a reward name!'); return; }
+  const eEl = document.getElementById('bonus-e');
+  const tEl = document.getElementById('bonus-t');
+  const e   = eEl.value.trim() || '⭐';
+  const t   = tEl.value.trim();
+  if (!t) { showToast('Enter a reward name!'); return; }
   const cfg = getConfig();
-  cfg.bonus.push({e:emoji, t:text});
+  cfg.bonus.push({e, t});
   saveConfig(cfg);
-  emojiEl.value = '';
-  textEl.value  = '';
+  eEl.value=''; tEl.value='';
   renderParentPanel(activeTab);
-  showToast(`Added: ${text}`);
+  showToast(`Added: ${t}`);
 }
 
 function deleteBonus(i) {
@@ -851,13 +1190,43 @@ function deleteBonus(i) {
   showToast('Bonus removed');
 }
 
-// ── PIN editor ──
+// ─────────────────────────────────────────────────────────────────
+// NOTIFY EDITOR
+// ─────────────────────────────────────────────────────────────────
+
+function renderNotifyEditor(editor) {
+  const cfg = getConfig();
+  editor.innerHTML = `
+    <div class="info-box">
+      When a kid checks off all their chores, a <strong>"Notify Parents"</strong> button appears.
+      Tapping it opens your phone's email app with a pre-filled message ready to send.
+      Enter one or both parent emails below (separate with a comma).
+    </div>
+    <label style="font-size:.82rem;font-weight:700;color:#555">Parent Email(s)</label>
+    <input class="email-input" type="email" id="parent-email"
+           placeholder="mom@email.com, dad@email.com"
+           value="${cfg.parentEmail || ''}"/>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="saveEmail()">Save Email</button>`;
+}
+
+function saveEmail() {
+  const val = document.getElementById('parent-email').value.trim();
+  const cfg = getConfig();
+  cfg.parentEmail = val;
+  saveConfig(cfg);
+  showToast('✅ Email saved!');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PIN EDITOR
+// ─────────────────────────────────────────────────────────────────
+
 function renderPinEditor(editor) {
   editor.innerHTML = `
     <p style="color:#888;font-size:.85rem;margin-bottom:14px">Change your 4-digit parent PIN.</p>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input type="password" inputmode="numeric" maxlength="4" id="new-pin"
-             class="pin-input-single" placeholder="New PIN"/>
+      <input type="password" inputmode="numeric" maxlength="4"
+             id="new-pin" class="pin-input-single" placeholder="New PIN"/>
       <button class="btn btn-primary btn-sm" onclick="savePin()">Save PIN</button>
     </div>`;
 }
@@ -870,7 +1239,9 @@ function savePin() {
   showToast('✅ PIN updated!');
 }
 
-// ─── TOAST ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────────────────────────
 
 let toastTimer;
 function showToast(msg, dur=2500) {
@@ -881,7 +1252,9 @@ function showToast(msg, dur=2500) {
   toastTimer = setTimeout(()=>el.classList.remove('show'), dur);
 }
 
-// ─── BOOT ──────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────────────
 renderWelcome();
 </script>
 </body>
