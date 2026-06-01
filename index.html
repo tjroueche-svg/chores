@@ -43,7 +43,7 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
 /* ── Sync badge ── */
 .sync-badge{
   font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:99px;
-  white-space:nowrap;
+  white-space:nowrap;cursor:pointer;
 }
 .sync-badge.ok     {background:#eefaf4;color:#2ab87a}
 .sync-badge.syncing{background:#f0f0ff;color:#6C63FF}
@@ -337,7 +337,7 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
   <p class="subtitle">Tap your name to see today's chores!</p>
   <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
     <span class="date-badge" id="welcome-date" style="margin-bottom:0"></span>
-    <span class="sync-badge" id="sync-badge" style="display:none"></span>
+    <span class="sync-badge" id="sync-badge" style="display:none" onclick="manualRefresh()" title="Tap to refresh"></span>
   </div>
   <div class="kid-grid" id="kid-grid"></div>
   <p class="section-label">Today's Board</p>
@@ -566,8 +566,9 @@ async function pullFromRemote() {
   if (!sync.binId || !sync.apiKey) { showSyncBadge('local'); return; }
   try {
     showSyncBadge('syncing');
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest`, {
-      headers: { 'X-Master-Key': sync.apiKey },
+    // Add timestamp to bust any CDN/browser cache so we always get fresh data
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest?t=${Date.now()}`, {
+      headers: { 'X-Master-Key': sync.apiKey, 'Cache-Control': 'no-cache' },
     });
     if (!res.ok) { showSyncBadge('error'); return; }
     const data = (await res.json()).record || {};
@@ -1489,9 +1490,32 @@ function showToast(msg, dur=2500) {
 // ─────────────────────────────────────────────────────────────────
 // BOOT — pull latest from cloud first, then render
 // ─────────────────────────────────────────────────────────────────
-(async () => {
-  await pullFromRemote(); // no-op if sync not configured; ~0.5s if it is
+
+// Manual refresh — tap the sync badge or call directly
+async function manualRefresh() {
+  showSyncBadge('syncing');
+  await pullFromRemote();
   renderWelcome();
+  // If a kid's screen is open, refresh it too
+  if (currentKid && document.getElementById('screen-spin').classList.contains('active')) {
+    renderSpinScreen();
+  }
+}
+
+(async () => {
+  // Initial load
+  await pullFromRemote();
+  renderWelcome();
+
+  // Auto-sync when the user switches back to the app (tab/PWA comes into focus)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') manualRefresh();
+  });
+
+  // Also poll every 45 seconds in case the app stays open on a device
+  setInterval(() => {
+    if (document.visibilityState === 'visible') manualRefresh();
+  }, 45_000);
 })();
 </script>
 </body>
