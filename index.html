@@ -342,7 +342,8 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
   <div class="kid-grid" id="kid-grid"></div>
   <p class="section-label">Today's Board</p>
   <ul class="dash-list" id="dash-welcome"></ul>
-  <button class="btn btn-secondary" onclick="goParentLogin()">🔐 Parent Settings</button>
+  <button class="btn btn-secondary" id="refresh-btn" onclick="manualRefresh()" style="margin-top:14px">🔄 Refresh from Cloud</button>
+  <button class="btn btn-secondary" onclick="goParentLogin()" style="margin-top:8px">🔐 Parent Settings</button>
 </div>
 
 <!-- ══════ REVEAL / CHORES ══════ -->
@@ -545,46 +546,43 @@ function buildSyncPayload() {
   };
 }
 
-// Push current state to JSONBin (background, non-blocking)
+// Push current state to JSONBin — returns true on success
 async function pushRemote() {
   const sync = getSyncConfig();
-  if (!sync.binId || !sync.apiKey) return;
+  if (!sync.binId || !sync.apiKey) return false;
   try {
     showSyncBadge('syncing');
     const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'X-Master-Key': sync.apiKey },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': sync.apiKey,
+        'X-Bin-Versioning': 'false', // overwrite in place, don't stack versions
+      },
       body: JSON.stringify(buildSyncPayload()),
     });
-    showSyncBadge(res.ok ? 'ok' : 'error');
-  } catch { showSyncBadge('error'); }
+    if (!res.ok) { showSyncBadge('error'); return false; }
+    showSyncBadge('ok');
+    return true;
+  } catch { showSyncBadge('error'); return false; }
 }
 
-// Pull latest from JSONBin and merge into localStorage (awaited on boot)
+// Pull latest from JSONBin — force a fresh network request every time
 async function pullFromRemote() {
   const sync = getSyncConfig();
   if (!sync.binId || !sync.apiKey) { showSyncBadge('local'); return; }
   try {
     showSyncBadge('syncing');
-    // Add timestamp to bust any CDN/browser cache so we always get fresh data
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest?t=${Date.now()}`, {
-      headers: { 'X-Master-Key': sync.apiKey, 'Cache-Control': 'no-cache' },
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest`, {
+      cache: 'no-store', // bypass browser cache entirely
+      headers: { 'X-Master-Key': sync.apiKey },
     });
     if (!res.ok) { showSyncBadge('error'); return; }
     const data = (await res.json()).record || {};
 
-    // Remote wins for config
-    if (data.config) localStorage.setItem(KEY_CONFIG, JSON.stringify(data.config));
-
-    // Remote wins for daily state if it's for today
-    if (data.dailyState?.date === todayStr()) {
-      localStorage.setItem(KEY_STATE, JSON.stringify(data.dailyState));
-    }
-
-    // Remote wins for weekly bonus if it's still this week
-    if (data.weeklyBonus?.weekId === weekId()) {
-      localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(data.weeklyBonus));
-    }
+    if (data.config)                           localStorage.setItem(KEY_CONFIG,     JSON.stringify(data.config));
+    if (data.dailyState?.date  === todayStr()) localStorage.setItem(KEY_STATE,      JSON.stringify(data.dailyState));
+    if (data.weeklyBonus?.weekId === weekId()) localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(data.weeklyBonus));
 
     showSyncBadge('ok');
   } catch { showSyncBadge('error'); }
@@ -938,30 +936,33 @@ function buildChoreList(chores, bonusChore) {
 // TOGGLE CHORE DONE
 // ─────────────────────────────────────────────────────────────────
 
-function toggleChore(idx, isBonus) {
+async function toggleChore(idx, isBonus) {
   const cfg   = getConfig();
   const state = getState();
   const wb    = getWeekBonus();
 
   if (isBonus) {
-    // Toggle in weekly bonus state (persists across days)
     if (wb?.bonuses?.[currentKid.name]) {
       wb.bonuses[currentKid.name].done = !wb.bonuses[currentKid.name].done;
-      saveWeekBonus(wb);
+      localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
     }
   } else {
-    // Toggle in daily state
     state.assignments[currentKid.name][idx].done =
       !state.assignments[currentKid.name][idx].done;
-    saveState(state);
+    localStorage.setItem(KEY_STATE, JSON.stringify(state));
   }
 
+  // Update UI immediately (optimistic)
   const chores = state.assignments[currentKid.name];
   const bonus  = wb?.bonuses?.[currentKid.name] || null;
   buildChoreList(chores, bonus);
   renderDash('dash-spin', cfg, state, wb);
   checkAllDone(state, cfg);
   checkBonusDone(wb, cfg);
+
+  // Push to cloud and confirm — awaited so we know it landed
+  const ok = await pushRemote();
+  if (!ok) showToast('⚠️ Could not sync — tap the sync badge to retry', 3500);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -1491,15 +1492,17 @@ function showToast(msg, dur=2500) {
 // BOOT — pull latest from cloud first, then render
 // ─────────────────────────────────────────────────────────────────
 
-// Manual refresh — tap the sync badge or call directly
+// Manual refresh — tap the sync badge or the Refresh button
 async function manualRefresh() {
-  showSyncBadge('syncing');
+  const btn = document.getElementById('refresh-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 Refreshing…'; }
   await pullFromRemote();
   renderWelcome();
-  // If a kid's screen is open, refresh it too
   if (currentKid && document.getElementById('screen-spin').classList.contains('active')) {
     renderSpinScreen();
   }
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Refresh from Cloud'; }
+  showToast('✅ Refreshed!', 1500);
 }
 
 (async () => {
