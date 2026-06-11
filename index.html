@@ -138,7 +138,6 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
   border:none;cursor:pointer;
 }
 .notify-btn:active{opacity:.85}
-/* Bonus banner — gold variant */
 .bonus-done-banner{background:linear-gradient(135deg,#f5a623,#e6870a) !important}
 .bonus-done-banner .notify-btn{color:#e6870a !important}
 
@@ -285,6 +284,7 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
   cursor:pointer;transition:all .15s;
 }
 .kid-pill.active{background:#6C63FF;border-color:#6C63FF;color:#fff}
+.kid-pill.green-active{background:#43c88a;border-color:#43c88a;color:#fff}
 .kid-pill:active{opacity:.8}
 .shared-toggle{
   display:flex;align-items:center;gap:6px;margin-bottom:6px;
@@ -338,6 +338,44 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
 }
 .toast.show{transform:translateX(-50%) translateY(0)}
 
+/* ── Today Editor ── */
+.today-kid-section{margin-bottom:18px}
+.today-kid-header{
+  font-size:.88rem;font-weight:900;color:#6C63FF;
+  margin-bottom:6px;padding-bottom:5px;border-bottom:2px solid #e0dcff;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.today-chore-row{
+  background:#f8f7ff;border-radius:10px;
+  padding:7px 10px;margin-bottom:5px;
+}
+.today-chore-main{display:flex;align-items:center;gap:6px}
+.today-chore-name{flex:1;font-size:.84rem;font-weight:600;color:#333}
+.today-chore-name.is-done{text-decoration:line-through;color:#aaa}
+.today-mini-btn{
+  background:#e0dcff;border:none;border-radius:7px;
+  padding:4px 9px;font-size:.72rem;font-weight:800;color:#6C63FF;
+  cursor:pointer;white-space:nowrap;
+}
+.today-mini-btn.danger{background:#fff0f0;color:#e05555}
+.today-mini-btn:active{opacity:.75}
+.move-picker{
+  display:flex;gap:5px;flex-wrap:wrap;
+  margin-top:6px;padding-left:22px;
+}
+.move-picker span{font-size:.72rem;font-weight:700;color:#999;align-self:center}
+.move-target-btn{
+  background:#6C63FF;color:#fff;border:none;border-radius:8px;
+  padding:4px 10px;font-size:.73rem;font-weight:700;cursor:pointer;
+}
+.move-target-btn:active{opacity:.8}
+.add-today-row{display:flex;gap:6px;align-items:center;margin-top:8px}
+.add-today-select{
+  flex:1;border:1.5px solid #e0dcff;border-radius:10px;
+  padding:7px 8px;font-size:.8rem;color:#333;background:#fff;
+}
+.add-today-select:focus{border-color:#6C63FF;outline:none}
+
 @media(max-width:360px){
   h1{font-size:1.5rem}
   .kid-btn{padding:14px 6px;font-size:.88rem}
@@ -369,14 +407,12 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
     <h2 id="spin-kid-title"></h2>
   </div>
 
-  <!-- Regular chores all done -->
   <div class="all-done-banner" id="all-done-banner">
     <h3>🎉 Chores Done!</h3>
     <p id="all-done-msg"></p>
     <a class="notify-btn" id="notify-link" href="#">📧 Notify Parents</a>
   </div>
 
-  <!-- Bonus chore done (separate, any day Mon–Fri) -->
   <div class="all-done-banner bonus-done-banner" id="bonus-done-banner" style="display:none">
     <h3>⭐ Bonus Complete!</h3>
     <p>Tap below to let Mom &amp; Dad know!</p>
@@ -434,25 +470,23 @@ h2{font-size:1.1rem;font-weight:800;color:#333}
 // ─────────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────
-
 const KEY_STATE        = 'choreState3';
 const KEY_CONFIG       = 'choreConfig3';
-const KEY_PIN          = 'chorePin';
-const KEY_WEEK_BONUS   = 'choreWeekBonus';  // persists Mon–Fri independently of daily state
-const KEY_SYNC         = 'choreSyncCfg';    // JSONBin credentials (device-local only)
-const KEY_BONUS_CYCLE  = 'choreBonusCycle'; // tracks which bonuses have been used across weeks
-const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const CHORES_PER_KID = 3;
-const SPIN_MS = 1600;
+const KEY_PIN          = 'chorePin';        // legacy — migrated into config
+const KEY_WEEK_BONUS   = 'choreWeekBonus';  // weekly bonus, persists Mon–Fri
+const KEY_SYNC         = 'choreSyncCfg';    // JSONBin credentials (device-local)
+const KEY_BONUS_CYCLE  = 'choreBonusCycle'; // round-robin bonus rotation
+const KEY_PREV_ASSIGN  = 'chorePrevAssign'; // yesterday's assignments {date, assignments}
+const KEY_WEEK_TRACKER = 'choreWeekTracker';// weekly-required coverage {weekId, assigned}
+
+const CHORES_PER_KID = 3; // minimum per kid per day
+const SPIN_MS        = 1600;
+const DAYS_SHORT     = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_FULL      = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 // ─────────────────────────────────────────────────────────────────
-// DEFAULT CONFIG
-// Chore schedule types:
-//   'fixed'  → appears on specific days (days: [0,1,...6])
-//   'random' → appears N days per week based on frequency (1-7)
+// DEFAULTS
 // ─────────────────────────────────────────────────────────────────
-
 const DEFAULT_KIDS = [
   {name:'Carson', avatar:'🎮'},
   {name:'Benson', avatar:'⛹️'},
@@ -461,31 +495,31 @@ const DEFAULT_KIDS = [
 ];
 
 const DEFAULT_CHORES = [
-  {e:'💩', t:'Scoop Poop',                   schedule:'random', frequency:3},
-  {e:'🛏️', t:'Pick Up Room',                 schedule:'random', frequency:5},
-  {e:'🪟', t:'Dust Blinds & Furniture',       schedule:'random', frequency:3},
-  {e:'🧹', t:'Vacuum Rug & Mop Floor',        schedule:'random', frequency:4},
-  {e:'🚿', t:'Clean Bathroom',                schedule:'random', frequency:4},
-  {e:'🧽', t:'Wipe Appliances',               schedule:'random', frequency:2},
-  {e:'🧹', t:'Clean Mudroom',                 schedule:'random', frequency:2},
-  {e:'🧹', t:'Dust Living Room',              schedule:'random', frequency:2},
-  {e:'🗑️', t:'Bathroom Trash',               schedule:'fixed',  days:[1,4]},
-  {e:'🐕', t:'Bathe Dogs',                    schedule:'fixed',  days:[3,6]},
-  {e:'🛁', t:'Change Towels',                 schedule:'fixed',  days:[1]},
-  {e:'💡', t:'Wipe Lights & Knobs',           schedule:'random', frequency:1},
-  {e:'🧻', t:'Restock Toilet Paper',          schedule:'random', frequency:1},
-  {e:'🧹', t:'Vacuum Hallway & Stairs',       schedule:'fixed',  days:[6]},
-  {e:'🛋️', t:'Vacuum Bonus Room',            schedule:'fixed',  days:[6]},
-  {e:'🍽️', t:'Set & Clear the Table',              schedule:'random', frequency:5},
-  {e:'🌿', t:'Water the Plants',                    schedule:'fixed',  days:[1,5]},
-  {e:'🪑', t:'Wipe Barstools',                      schedule:'random', frequency:1},
-  {e:'🗄️', t:'Wipe Upper & Lower Cabinets',        schedule:'random', frequency:1},
-  {e:'🧹', t:'Sweep & Mop Upstairs Hall & Stairs',  schedule:'random', frequency:1},
-  {e:'💨', t:'Blow Out Garage & Patio',             schedule:'random', frequency:1},
-  {e:'👩', t:"Mom's Choice",                        schedule:'random', frequency:1},
-  {e:'🛋️', t:'Wipe Couch',                         schedule:'random', frequency:1},
-  {e:'🌱', t:'Mow',                                 schedule:'random', frequency:1},
-  {e:'✂️', t:'Edge',                               schedule:'random', frequency:1},
+  {e:'💩', t:'Scoop Poop',                          schedule:'random', frequency:3, weeklyRequired:[]},
+  {e:'🛏️', t:'Pick Up Room',                        schedule:'random', frequency:5, weeklyRequired:[]},
+  {e:'🪟', t:'Dust Blinds & Furniture',              schedule:'random', frequency:3, weeklyRequired:[]},
+  {e:'🧹', t:'Vacuum Rug & Mop Floor',               schedule:'random', frequency:4, weeklyRequired:[]},
+  {e:'🚿', t:'Clean Bathroom',                       schedule:'random', frequency:4, weeklyRequired:[]},
+  {e:'🧽', t:'Wipe Appliances',                      schedule:'random', frequency:2, weeklyRequired:[]},
+  {e:'🧹', t:'Clean Mudroom',                        schedule:'random', frequency:2, weeklyRequired:[]},
+  {e:'🧹', t:'Dust Living Room',                     schedule:'random', frequency:2, weeklyRequired:[]},
+  {e:'🗑️', t:'Bathroom Trash',                      schedule:'fixed',  days:[1,4],  weeklyRequired:[]},
+  {e:'🐕', t:'Bathe Dogs',                           schedule:'fixed',  days:[3,6],  weeklyRequired:[]},
+  {e:'🛁', t:'Change Towels',                        schedule:'fixed',  days:[1],    weeklyRequired:[]},
+  {e:'💡', t:'Wipe Lights & Knobs',                  schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'🧻', t:'Restock Toilet Paper',                 schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'🧹', t:'Vacuum Hallway & Stairs',              schedule:'fixed',  days:[6],    weeklyRequired:[]},
+  {e:'🛋️', t:'Vacuum Bonus Room',                   schedule:'fixed',  days:[6],    weeklyRequired:[]},
+  {e:'🍽️', t:'Set & Clear the Table',               schedule:'random', frequency:5, weeklyRequired:[]},
+  {e:'🌿', t:'Water the Plants',                     schedule:'fixed',  days:[1,5],  weeklyRequired:[]},
+  {e:'🪑', t:'Wipe Barstools',                       schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'🗄️', t:'Wipe Upper & Lower Cabinets',         schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'🧹', t:'Sweep & Mop Upstairs Hall & Stairs',   schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'💨', t:'Blow Out Garage & Patio',              schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'👩', t:"Mom's Choice",                         schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'🛋️', t:'Wipe Couch',                          schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'🌱', t:'Mow',                                  schedule:'random', frequency:1, weeklyRequired:[]},
+  {e:'✂️', t:'Edge',                                schedule:'random', frequency:1, weeklyRequired:[]},
 ];
 
 const DEFAULT_BONUS = [
@@ -497,79 +531,163 @@ const DEFAULT_BONUS = [
 ];
 
 // ─────────────────────────────────────────────────────────────────
+// SEEDED RNG — deterministic per seed
+// ─────────────────────────────────────────────────────────────────
+function strSeed(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = Math.imul(31, h) + s.charCodeAt(i) | 0; }
+  return Math.abs(h);
+}
+function seededRandFloat(seed) {
+  seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+  let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+function seededShuffle(arr, seed) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    seed = strSeed(seed + i);
+    const j = Math.floor(seededRandFloat(seed) * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// WEEK ID — Monday–Saturday based
+// Format: "YYYY-MM-DD" of the Monday that starts this week.
+// Sunday is a rest day and is NOT part of the chore week.
+// ─────────────────────────────────────────────────────────────────
+function weekId() {
+  const d = new Date();
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon … 6=Sat
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sun → go back 6 to last Mon
+  const start = new Date(d);
+  start.setDate(d.getDate() - daysFromMonday);
+  const y  = start.getFullYear();
+  const mo = String(start.getMonth() + 1).padStart(2, '0');
+  const da = String(start.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${da}`;
+}
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+// ─────────────────────────────────────────────────────────────────
+// PREV-ASSIGNMENT STORE — enables no-repeat rule across days
+// ─────────────────────────────────────────────────────────────────
+function getYesterdayAssignments() {
+  try {
+    const raw = localStorage.getItem(KEY_PREV_ASSIGN);
+    if (!raw) return {};
+    const data = JSON.parse(raw);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (data.date !== yesterday.toISOString().slice(0, 10)) return {};
+    return data.assignments || {};
+  } catch { return {}; }
+}
+
+function savePrevAssignments(dateStr, assignments) {
+  const data = { date: dateStr, assignments: {} };
+  Object.keys(assignments).forEach(k => {
+    data.assignments[k] = assignments[k].map(c => c.t);
+  });
+  localStorage.setItem(KEY_PREV_ASSIGN, JSON.stringify(data));
+}
+
+// ─────────────────────────────────────────────────────────────────
+// WEEK TRACKER — tracks which chores each kid has been assigned
+// this week, enabling the "weekly required" feature
+// ─────────────────────────────────────────────────────────────────
+function getWeekTracker() {
+  try {
+    const raw = localStorage.getItem(KEY_WEEK_TRACKER);
+    if (!raw) return {};
+    const data = JSON.parse(raw);
+    if (data.weekId !== weekId()) return {};
+    return data.assigned || {};
+  } catch { return {}; }
+}
+
+function saveWeekTracker(assigned) {
+  localStorage.setItem(KEY_WEEK_TRACKER, JSON.stringify({ weekId: weekId(), assigned }));
+}
+
+// ─────────────────────────────────────────────────────────────────
 // CONFIG HELPERS
 // ─────────────────────────────────────────────────────────────────
-
 function getConfig() {
   try {
     const raw = localStorage.getItem(KEY_CONFIG);
     if (raw) {
       const cfg = JSON.parse(raw);
-      // Migrate PIN from KEY_PIN into config (one-time)
+      // Migrate PIN from legacy key
       if (!cfg.pin && localStorage.getItem(KEY_PIN)) cfg.pin = localStorage.getItem(KEY_PIN);
-      // Never re-add chores that were explicitly deleted
-      const deletedNames = new Set((cfg.deletedChores || []).map(t => t.toLowerCase()));
+      // Ensure deletedChores list exists
+      if (!cfg.deletedChores) cfg.deletedChores = [];
+      // Add any new default chores not already present (and not explicitly deleted)
+      const deletedNames  = new Set(cfg.deletedChores.map(t => t.toLowerCase()));
       const existingNames = new Set(cfg.chores.map(c => c.t.toLowerCase()));
       const newChores = DEFAULT_CHORES.filter(c =>
         !existingNames.has(c.t.toLowerCase()) && !deletedNames.has(c.t.toLowerCase())
       );
       if (newChores.length) cfg.chores = [...cfg.chores, ...newChores];
+      // Migrate: ensure weeklyRequired array on all chores
+      cfg.chores.forEach(c => {
+        if (!Array.isArray(c.weeklyRequired)) c.weeklyRequired = [];
+      });
       return cfg;
     }
-  } catch {}
+  } catch { /* fall through to defaults */ }
   return {
-    kids: DEFAULT_KIDS,
-    chores: DEFAULT_CHORES,
-    bonus: DEFAULT_BONUS,
-    parentEmail: '',
-    pin: '1234',
-    deletedChores: [],   // names of chores explicitly deleted — never re-added
+    kids:         DEFAULT_KIDS,
+    chores:       DEFAULT_CHORES.map(c => ({ ...c, weeklyRequired: [] })),
+    bonus:        DEFAULT_BONUS,
+    parentEmail:  '',
+    pin:          '1234',
+    deletedChores: [],
   };
 }
 
 async function saveConfig(cfg) {
   localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg));
   const ok = await pushRemote();
-  if (!ok) showToast('⚠️ Settings saved locally but cloud sync failed', 3500);
+  if (!ok) showToast('⚠️ Saved locally but cloud sync failed', 3500);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // CROSS-DEVICE SYNC  (JSONBin.io)
-// All mutable state is pushed to a shared JSON bin so every device
-// sees the same config, completion state, and weekly bonus progress.
-// The bin credentials are stored locally per-device (KEY_SYNC).
 // ─────────────────────────────────────────────────────────────────
-
-function getSyncConfig() {
-  try { return JSON.parse(localStorage.getItem(KEY_SYNC)) || {}; } catch { return {}; }
-}
-function saveSyncConfig(s) { localStorage.setItem(KEY_SYNC, JSON.stringify(s)); }
+function getSyncConfig()    { try { return JSON.parse(localStorage.getItem(KEY_SYNC)) || {}; } catch { return {}; } }
+function saveSyncConfig(s)  { localStorage.setItem(KEY_SYNC, JSON.stringify(s)); }
 
 function showSyncBadge(state) {
   const el = document.getElementById('sync-badge');
   if (!el) return;
   const map = {
-    ok:      { text:'☁️ Synced',   cls:'ok'      },
-    syncing: { text:'🔄 Syncing…', cls:'syncing'  },
-    error:   { text:'⚠️ Sync Error',cls:'error'   },
-    local:   { text:'📱 Local Only',cls:'local'   },
+    ok:      { text:'☁️ Synced',    cls:'ok'      },
+    syncing: { text:'🔄 Syncing…',  cls:'syncing'  },
+    error:   { text:'⚠️ Sync Error', cls:'error'   },
+    local:   { text:'📱 Local Only', cls:'local'   },
   };
   const { text, cls } = map[state] || map.local;
-  el.textContent  = text;
-  el.className    = `sync-badge ${cls}`;
+  el.textContent   = text;
+  el.className     = `sync-badge ${cls}`;
   el.style.display = 'inline-block';
 }
 
-// Build the full payload to push/pull
 function buildSyncPayload() {
+  const safeGet = key => { try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; } };
   return {
     config:      getConfig(),
     dailyState:  getState(),
-    weeklyBonus: (() => { try { return JSON.parse(localStorage.getItem(KEY_WEEK_BONUS)) || null; } catch { return null; } })(),
+    weeklyBonus: safeGet(KEY_WEEK_BONUS),
+    prevAssign:  safeGet(KEY_PREV_ASSIGN),
+    weekTracker: safeGet(KEY_WEEK_TRACKER),
   };
 }
 
-// Push current state to JSONBin — returns true on success
 async function pushRemote() {
   const sync = getSyncConfig();
   if (!sync.binId || !sync.apiKey) return false;
@@ -578,9 +696,9 @@ async function pushRemote() {
     const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': sync.apiKey,
-        'X-Bin-Versioning': 'false', // overwrite in place, don't stack versions
+        'Content-Type':    'application/json',
+        'X-Master-Key':    sync.apiKey,
+        'X-Bin-Versioning':'false',
       },
       body: JSON.stringify(buildSyncPayload()),
     });
@@ -590,87 +708,72 @@ async function pushRemote() {
   } catch { showSyncBadge('error'); return false; }
 }
 
-// Pull latest from JSONBin — force a fresh network request every time
 async function pullFromRemote() {
   const sync = getSyncConfig();
   if (!sync.binId || !sync.apiKey) { showSyncBadge('local'); return; }
   try {
     showSyncBadge('syncing');
     const res = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest`, {
-      cache: 'no-store', // bypass browser cache entirely
+      cache:   'no-store',
       headers: { 'X-Master-Key': sync.apiKey },
     });
     if (!res.ok) { showSyncBadge('error'); return; }
     const data = (await res.json()).record || {};
 
-    if (data.config)                           localStorage.setItem(KEY_CONFIG,     JSON.stringify(data.config));
-    if (data.dailyState?.date  === todayStr()) localStorage.setItem(KEY_STATE,      JSON.stringify(data.dailyState));
-    if (data.weeklyBonus?.weekId === weekId()) localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(data.weeklyBonus));
+    if (data.config)                             localStorage.setItem(KEY_CONFIG,       JSON.stringify(data.config));
+    if (data.dailyState?.date  === todayStr())   localStorage.setItem(KEY_STATE,        JSON.stringify(data.dailyState));
+    if (data.weeklyBonus?.weekId === weekId())   localStorage.setItem(KEY_WEEK_BONUS,   JSON.stringify(data.weeklyBonus));
+    if (data.prevAssign)                         localStorage.setItem(KEY_PREV_ASSIGN,  JSON.stringify(data.prevAssign));
+    if (data.weekTracker?.weekId === weekId())   localStorage.setItem(KEY_WEEK_TRACKER, JSON.stringify(data.weekTracker));
 
     showSyncBadge('ok');
   } catch { showSyncBadge('error'); }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// WEEKLY BONUS STATE
-// Generated on Monday, persists through Friday (Sat/Sun = no bonus).
-// Stored separately from daily state so checking off a bonus chore
-// survives the nightly daily-state reset.
+// WEEKLY BONUS  (Mon–Fri only)
 // ─────────────────────────────────────────────────────────────────
-
 function getWeekBonus() {
   const dayIdx = new Date().getDay();
-  // Only show bonus Mon (1) through Fri (5)
-  if (dayIdx === 0 || dayIdx === 6) return null;
+  if (dayIdx === 0 || dayIdx === 6) return null; // no bonus on weekends
 
   try {
     const raw = localStorage.getItem(KEY_WEEK_BONUS);
     if (raw) {
       const wb = JSON.parse(raw);
-      if (wb.weekId === weekId()) return wb; // still this week
+      if (wb.weekId === weekId()) return wb;
     }
   } catch {}
 
-  // Generate fresh bonus assignments for this week
   return generateWeekBonus(getConfig());
 }
 
 function generateWeekBonus(cfg) {
-  if (!cfg.bonus.length) {
+  if (!cfg.bonus || !cfg.bonus.length) {
     const wb = { weekId: weekId(), bonuses: {} };
     cfg.kids.forEach(k => { wb.bonuses[k.name] = null; });
     localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
     return wb;
   }
 
-  // Load the cycle tracker — tracks which bonuses have been given out
-  // so we don't repeat until all have been used at least once
   let cycle = {};
   try { cycle = JSON.parse(localStorage.getItem(KEY_BONUS_CYCLE)) || {}; } catch {}
   if (!Array.isArray(cycle.used)) cycle.used = [];
 
   const bonuses = {};
   cfg.kids.forEach((kid, i) => {
-    // Available = bonuses not yet used in this cycle
     let available = cfg.bonus.filter(b => !cycle.used.includes(b.t));
     if (available.length === 0) {
-      // All used — reset the cycle and start fresh
       cycle.used = [];
-      available = [...cfg.bonus];
+      available  = [...cfg.bonus];
     }
-
-    // Seeded pick so same week always gives same bonus to same kid
-    const seed = strSeed(`${weekId()}-bonus-${kid.name}-${i}-${cycle.used.length}`);
-    const idx  = Math.floor(seededRandFloat(seed) * available.length);
-    const picked = available[idx];
-
+    const seed   = strSeed(`${weekId()}-bonus-${kid.name}-${i}-${cycle.used.length}`);
+    const picked = available[Math.floor(seededRandFloat(seed) * available.length)];
     bonuses[kid.name] = { ...picked, done: false, notified: false };
     if (!cycle.used.includes(picked.t)) cycle.used.push(picked.t);
   });
 
-  // Persist the updated cycle
   localStorage.setItem(KEY_BONUS_CYCLE, JSON.stringify(cycle));
-
   const wb = { weekId: weekId(), bonuses };
   localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
   return wb;
@@ -682,122 +785,142 @@ async function saveWeekBonus(wb) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// SEEDED RNG — deterministic per week so the same day always gives
-// the same chore assignments even if the page is refreshed
-// ─────────────────────────────────────────────────────────────────
-
-function strSeed(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) { h = Math.imul(31, h) + s.charCodeAt(i) | 0; }
-  return Math.abs(h);
-}
-
-function seededRandFloat(seed) {
-  // mulberry32
-  seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-  let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-  return ((t ^ t >>> 14) >>> 0) / 4294967296;
-}
-
-function seededShuffle(arr, seed) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    seed = strSeed(seed + i);
-    const j = Math.floor(seededRandFloat(seed) * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// ISO week identifier: "2025-W22"
-function weekId() {
-  const d = new Date();
-  const jan1 = new Date(d.getFullYear(), 0, 1);
-  const week = Math.ceil((((d - jan1) / 86400000) + jan1.getDay() + 1) / 7);
-  return `${d.getFullYear()}-W${week}`;
-}
-
-// ─────────────────────────────────────────────────────────────────
-// CHORE POOL FOR TODAY
-// Fixed chores: always in pool on their designated days
-// Random chores: seeded by week+choreIndex to appear on N days this week
-// ─────────────────────────────────────────────────────────────────
-
-function getTodayPool(cfg) {
-  const dayIdx = new Date().getDay();
-  const wid    = weekId();
-  const pool   = [];
-
-  cfg.chores.forEach((chore, idx) => {
-    if (chore.schedule === 'fixed') {
-      if ((chore.days || []).includes(dayIdx)) pool.push(chore);
-    } else {
-      // Random: pick 'frequency' days this week using seeded shuffle
-      const freq     = Math.min(Math.max(chore.frequency || 1, 1), 7);
-      const seed     = strSeed(`${wid}-${idx}-${chore.t}`);
-      const active   = seededShuffle([0,1,2,3,4,5,6], seed).slice(0, freq);
-      if (active.includes(dayIdx)) pool.push(chore);
-    }
-  });
-
-  return pool;
-}
-
-// ─────────────────────────────────────────────────────────────────
 // DAILY STATE GENERATION
+// Rules:
+//  1. Every active chore must be assigned to at least one eligible kid.
+//  2. Shared chores go to ALL eligible kids.
+//  3. Non-shared chores go to EXACTLY ONE eligible kid each.
+//  4. No kid should get the same chore 2 days in a row (waived only
+//     if they are the sole eligible kid for that chore).
+//  5. Kids marked as weeklyRequired for a chore get priority scoring.
+//  6. Load-balance: prefer assigning to kids with fewer chores so far.
+//  7. After distribution, pad any kid below CHORES_PER_KID (3) using
+//     eligible chores they don't already have (no-repeat preferred).
 // ─────────────────────────────────────────────────────────────────
-
-function todayStr() { return new Date().toISOString().slice(0, 10); }
-
 function generateDayState(cfg) {
   const kids    = cfg.kids;
   const dayIdx  = new Date().getDay();
   const wid     = weekId();
+  const dateStr = todayStr();
 
-  // Determine which chores are active today (respects fixed vs random schedule)
+  // Sunday (0) is a rest day — no chores
+  if (dayIdx === 0) {
+    const assignments = {};
+    const revealed    = {};
+    kids.forEach(k => { assignments[k.name] = []; revealed[k.name] = false; });
+    const s = { date: dateStr, assignments, revealed };
+    localStorage.setItem(KEY_STATE, JSON.stringify(s));
+    return s;
+  }
+
+  const prevAssign  = getYesterdayAssignments();
+  const weekTracker = getWeekTracker();
+
+  // Determine if a chore is active today.
+  // Random chores are seeded across Mon–Sat only (days 1–6).
   function isActiveToday(chore, idx) {
     if (chore.schedule === 'fixed') return (chore.days || []).includes(dayIdx);
-    const freq   = Math.min(Math.max(chore.frequency || 1, 1), 7);
-    const active = seededShuffle([0,1,2,3,4,5,6], strSeed(`${wid}-${idx}-${chore.t}`)).slice(0, freq);
+    const freq   = Math.min(Math.max(chore.frequency || 1, 1), 6); // max 6 (Mon–Sat)
+    const active = seededShuffle([1,2,3,4,5,6], strSeed(`${wid}-${idx}-${chore.t}`)).slice(0, freq);
     return active.includes(dayIdx);
   }
 
-  // All chores active today, indexed so the seeded schedule stays stable
   const activeToday = cfg.chores
     .map((c, i) => ({ ...c, _i: i }))
     .filter(c => isActiveToday(c, c._i));
 
-  // Non-shared chores can only be assigned to one kid. Track used ones.
-  const usedNonShared = new Set();
+  // Helpers
+  const isEligible = (kid, chore) =>
+    !chore.eligible || chore.eligible.length === 0 || chore.eligible.includes(kid.name);
 
-  // Randomise kid order (seeded so same day = same order)
-  const kidOrder = seededShuffle([...kids], strSeed(`${todayStr()}-kids`));
+  const hadYesterday = (kidName, choreTitle) =>
+    (prevAssign[kidName] || []).includes(choreTitle);
 
+  const needsWeeklyRequired = (kidName, choreTitle, chore) =>
+    (chore.weeklyRequired || []).includes(kidName) &&
+    !(weekTracker[kidName] || []).includes(choreTitle);
+
+  // Initialize empty assignment buckets
   const assignments = {};
-  kidOrder.forEach((kid, pos) => {
-    // Chores this kid is eligible for, and still available
-    const eligible = activeToday.filter(c => {
-      const kidOk = !c.eligible || c.eligible.length === 0 || c.eligible.includes(kid.name);
-      if (!kidOk) return false;
-      if (c.shared) return true;           // shared: unlimited
-      return !usedNonShared.has(c.t);      // non-shared: only if not yet taken
+  kids.forEach(k => { assignments[k.name] = []; });
+
+  // ── Phase 1: Shared chores → all eligible kids ──────────────────
+  const nonShared = [];
+  activeToday.forEach(chore => {
+    if (chore.shared) {
+      kids.forEach(kid => {
+        if (isEligible(kid, chore)) {
+          assignments[kid.name].push({ e: chore.e, t: chore.t, done: false });
+        }
+      });
+    } else {
+      nonShared.push(chore);
+    }
+  });
+
+  // ── Phase 2: Non-shared chores → one kid each ───────────────────
+  // Seeded shuffle gives deterministic ordering (same day = same result)
+  const shuffledNonShared = seededShuffle(nonShared, strSeed(`${dateStr}-ns`));
+
+  shuffledNonShared.forEach(chore => {
+    const eligible = kids.filter(k => isEligible(k, chore));
+    if (!eligible.length) return; // no eligible kid — skip
+
+    // Score each eligible kid (higher = better candidate)
+    const scored = eligible.map(kid => {
+      let score = -assignments[kid.name].length; // load balance: fewer chores = higher score
+      if (needsWeeklyRequired(kid.name, chore.t, chore)) score += 10; // strong boost
+      if (!hadYesterday(kid.name, chore.t)) score += 3;               // no-repeat boost
+      return { kid, score };
     });
 
-    // Seeded shuffle per kid so results are deterministic
-    const picked = seededShuffle(eligible, strSeed(`${todayStr()}-${kid.name}-${pos}`))
-                   .slice(0, CHORES_PER_KID);
+    const maxScore = Math.max(...scored.map(s => s.score));
+    const topKids  = scored.filter(s => s.score === maxScore).map(s => s.kid);
 
-    // Lock in non-shared chores
-    picked.forEach(c => { if (!c.shared) usedNonShared.add(c.t); });
-
-    assignments[kid.name] = picked.map(c => ({ e: c.e, t: c.t, done: false }));
+    // Seeded tiebreaker among equally-scored kids
+    const winner = seededShuffle(topKids, strSeed(`${dateStr}-pick-${chore.t}`))[0];
+    assignments[winner.name].push({ e: chore.e, t: chore.t, done: false });
   });
+
+  // ── Phase 3: Pad each kid to minimum CHORES_PER_KID ─────────────
+  kids.forEach(kid => {
+    if (assignments[kid.name].length >= CHORES_PER_KID) return;
+
+    const alreadyHas = new Set(assignments[kid.name].map(c => c.t));
+    const pool = activeToday.filter(c => isEligible(kid, c) && !alreadyHas.has(c.t));
+
+    // Prefer chores kid didn't have yesterday
+    const shuffledPool = seededShuffle(pool, strSeed(`${dateStr}-pad-${kid.name}`));
+    const noYest = shuffledPool.filter(c => !hadYesterday(kid.name, c.t));
+    const yest   = shuffledPool.filter(c =>  hadYesterday(kid.name, c.t));
+    const sorted = [...noYest, ...yest];
+
+    let i = 0;
+    while (assignments[kid.name].length < CHORES_PER_KID && i < sorted.length) {
+      const c = sorted[i++];
+      if (!alreadyHas.has(c.t)) {
+        assignments[kid.name].push({ e: c.e, t: c.t, done: false });
+        alreadyHas.add(c.t);
+      }
+    }
+    // If pool exhausted and still < 3, that's a config issue (too few chores)
+  });
+
+  // ── Post-processing: update week tracker & save prev assignments ─
+  const updatedTracker = { ...weekTracker };
+  kids.forEach(kid => {
+    if (!updatedTracker[kid.name]) updatedTracker[kid.name] = [];
+    assignments[kid.name].forEach(c => {
+      if (!updatedTracker[kid.name].includes(c.t)) updatedTracker[kid.name].push(c.t);
+    });
+  });
+  saveWeekTracker(updatedTracker);
+  savePrevAssignments(dateStr, assignments);
 
   const revealed = {};
   kids.forEach(k => { revealed[k.name] = false; });
 
-  const s = { date: todayStr(), assignments, revealed };
+  const s = { date: dateStr, assignments, revealed };
   localStorage.setItem(KEY_STATE, JSON.stringify(s));
   return s;
 }
@@ -821,7 +944,6 @@ async function saveState(s) {
 // ─────────────────────────────────────────────────────────────────
 // NAV
 // ─────────────────────────────────────────────────────────────────
-
 let currentKid  = null;
 let activeTab   = null;
 let screenStack = ['screen-welcome'];
@@ -841,28 +963,37 @@ function goBack() {
 // ─────────────────────────────────────────────────────────────────
 // WELCOME
 // ─────────────────────────────────────────────────────────────────
-
 function renderWelcome() {
   const cfg    = getConfig();
   const state  = getState();
-  const wb     = getWeekBonus(); // weekly bonus — null on weekends
+  const wb     = getWeekBonus();
   const dayIdx = new Date().getDay();
-  // Show gold ring Mon–Fri when a weekly bonus exists
   const isBonusWeek = wb !== null && dayIdx >= 1 && dayIdx <= 5;
 
   document.getElementById('welcome-date').textContent =
     new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
 
+  // Sunday rest day banner
+  const existingSunBanner = document.getElementById('sunday-banner');
+  if (existingSunBanner) existingSunBanner.remove();
+  if (dayIdx === 0) {
+    const banner = document.createElement('div');
+    banner.id = 'sunday-banner';
+    banner.style.cssText = 'background:linear-gradient(135deg,#f0f0ff,#f8f7ff);border:2px solid #e0dcff;border-radius:18px;padding:18px;text-align:center;margin-top:16px';
+    banner.innerHTML = '<div style="font-size:2rem;margin-bottom:8px">🌅</div><div style="font-size:1rem;font-weight:800;color:#6C63FF;margin-bottom:4px">Rest Day!</div><div style="font-size:.85rem;color:#999">No chores today — enjoy your Sunday.</div>';
+    document.getElementById('kid-grid').after(banner);
+  }
+
   document.getElementById('kid-grid').innerHTML = cfg.kids.map(kid => {
-    const chores       = state.assignments[kid.name] || [];
-    const regularDone  = chores.every(c => c.done);
-    const bonus        = wb?.bonuses?.[kid.name];
-    const bonusDone    = !bonus || bonus.done;
+    const chores      = state.assignments[kid.name] || [];
+    const regularDone = chores.length > 0 && chores.every(c => c.done);
+    const bonus       = wb?.bonuses?.[kid.name];
+    const bonusDone   = !bonus || bonus.done;
     return `<button class="kid-btn ${regularDone ? 'is-done' : ''} ${isBonusWeek ? 'is-monday' : ''}"
                     onclick="selectKid('${kid.name}')">
       <span class="av">${kid.avatar}</span>
       ${kid.name}
-      ${regularDone ? `<span class="tag">✅ Chores Done!</span>` : ''}
+      ${regularDone ? `<span class="tag">✅ Done!</span>` : `<span class="tag">${chores.length} chores</span>`}
       ${isBonusWeek && !bonusDone ? `<span class="tag">⭐ Bonus!</span>` : ''}
       ${isBonusWeek && bonusDone  ? `<span class="tag">🌟 Bonus Done!</span>` : ''}
     </button>`;
@@ -874,9 +1005,9 @@ function renderWelcome() {
 // ─────────────────────────────────────────────────────────────────
 // DASHBOARD
 // ─────────────────────────────────────────────────────────────────
-
 function renderDash(elId, cfg, state, wb) {
   const el = document.getElementById(elId);
+  if (!el) return;
   el.innerHTML = cfg.kids.map(kid => {
     if (!state.revealed[kid.name]) {
       return `<li class="dash-item">
@@ -887,7 +1018,7 @@ function renderDash(elId, cfg, state, wb) {
     }
     const chores      = state.assignments[kid.name] || [];
     const bonus       = wb?.bonuses?.[kid.name] || null;
-    const regularDone = chores.every(c => c.done);
+    const regularDone = chores.length > 0 && chores.every(c => c.done);
     const doneCount   = chores.filter(c => c.done).length;
 
     const choreText = chores.map(c =>
@@ -910,37 +1041,35 @@ function renderDash(elId, cfg, state, wb) {
 // ─────────────────────────────────────────────────────────────────
 // SELECT KID → SPIN SCREEN
 // ─────────────────────────────────────────────────────────────────
-
 function selectKid(name) {
   const cfg  = getConfig();
   currentKid = cfg.kids.find(k => k.name === name);
+  if (!currentKid) return;
   renderSpinScreen();
   nav('screen-spin');
 }
 
 function renderSpinScreen() {
+  if (!currentKid) return;
   const cfg   = getConfig();
   const state = getState();
   const wb    = getWeekBonus();
+
+  document.getElementById('spin-kid-title').textContent = `${currentKid.avatar} ${currentKid.name}'s Chores`;
+  document.getElementById('all-done-banner').style.display  = 'none';
+  document.getElementById('bonus-done-banner').style.display = 'none';
+
   const slotEmoji = document.getElementById('slot-emoji');
   const slotText  = document.getElementById('slot-text');
   const slotBadge = document.getElementById('slot-badge');
   const choreLst  = document.getElementById('chore-list-reveal');
   const spinBtn   = document.getElementById('spin-btn');
-  const banner    = document.getElementById('all-done-banner');
 
-  document.getElementById('spin-kid-title').textContent =
-    `${currentKid.avatar} ${currentKid.name}'s Chores`;
-
-  banner.style.display = 'none';
-  document.getElementById('bonus-done-banner').style.display = 'none';
-
-  const bonus = wb?.bonuses?.[currentKid.name] || null;
-  // Show the bonus badge in the reveal box only if there's an active bonus this week
   slotBadge.style.display = 'none';
 
   if (state.revealed[currentKid.name]) {
     const chores = state.assignments[currentKid.name] || [];
+    const bonus  = wb?.bonuses?.[currentKid.name] || null;
     slotEmoji.textContent = currentKid.avatar;
     slotEmoji.className   = 'slot-emoji';
     slotText.textContent  = '';
@@ -952,11 +1081,11 @@ function renderSpinScreen() {
     checkAllDone(state, cfg);
     checkBonusDone(wb, cfg);
   } else {
-    slotEmoji.textContent = '🎲';
-    slotEmoji.className   = 'slot-emoji';
-    slotText.textContent  = 'Tap the button to reveal!';
-    choreLst.style.display  = 'none';
-    choreLst.innerHTML      = '';
+    slotEmoji.textContent  = '🎲';
+    slotEmoji.className    = 'slot-emoji';
+    slotText.textContent   = 'Tap the button to reveal!';
+    choreLst.style.display = 'none';
+    choreLst.innerHTML     = '';
     spinBtn.disabled    = false;
     spinBtn.textContent = '🎰 Reveal My Chores!';
   }
@@ -967,12 +1096,10 @@ function renderSpinScreen() {
 // ─────────────────────────────────────────────────────────────────
 // BUILD CHORE LIST WITH CHECKBOXES
 // ─────────────────────────────────────────────────────────────────
-
 function buildChoreList(chores, bonusChore) {
   const ul = document.getElementById('chore-list-reveal');
   ul.innerHTML = '';
 
-  // Regular chores — tapping toggles done
   chores.forEach((chore, i) => {
     const li = document.createElement('li');
     li.className = `chore-item${chore.done ? ' is-done' : ''}`;
@@ -984,9 +1111,7 @@ function buildChoreList(chores, bonusChore) {
     ul.appendChild(li);
   });
 
-  // Bonus chore — rendered in its own section, separate notify flow
   if (bonusChore) {
-    // Divider
     const div = document.createElement('li');
     div.style.cssText = 'list-style:none;padding:8px 0 4px;font-size:.72rem;font-weight:800;color:#e6a000;letter-spacing:.5px;text-transform:uppercase;background:none;box-shadow:none';
     div.textContent = '⭐ This Week\'s Bonus Chore (due Friday)';
@@ -1006,8 +1131,8 @@ function buildChoreList(chores, bonusChore) {
 // ─────────────────────────────────────────────────────────────────
 // TOGGLE CHORE DONE
 // ─────────────────────────────────────────────────────────────────
-
 async function toggleChore(idx, isBonus) {
+  if (!currentKid) return;
   const cfg   = getConfig();
   const state = getState();
   const wb    = getWeekBonus();
@@ -1018,54 +1143,52 @@ async function toggleChore(idx, isBonus) {
       localStorage.setItem(KEY_WEEK_BONUS, JSON.stringify(wb));
     }
   } else {
-    state.assignments[currentKid.name][idx].done =
-      !state.assignments[currentKid.name][idx].done;
+    const list = state.assignments[currentKid.name];
+    if (!list || idx >= list.length) return;
+    list[idx].done = !list[idx].done;
     localStorage.setItem(KEY_STATE, JSON.stringify(state));
   }
 
-  // Update UI immediately (optimistic)
-  const chores = state.assignments[currentKid.name];
+  // Optimistic UI update
+  const chores = state.assignments[currentKid.name] || [];
   const bonus  = wb?.bonuses?.[currentKid.name] || null;
   buildChoreList(chores, bonus);
   renderDash('dash-spin', cfg, state, wb);
   checkAllDone(state, cfg);
   checkBonusDone(wb, cfg);
 
-  // Push to cloud and confirm — awaited so we know it landed
+  // Push to cloud
   const ok = await pushRemote();
   if (!ok) showToast('⚠️ Could not sync — tap the sync badge to retry', 3500);
 }
 
 // ─────────────────────────────────────────────────────────────────
-// ALL-DONE CHECK + NOTIFY BUTTON
+// ALL-DONE / BONUS-DONE CHECKS
 // ─────────────────────────────────────────────────────────────────
-
-// Regular chores all done → show main "All Done" banner + notify parents
 function checkAllDone(state, cfg) {
-  const chores    = state.assignments[currentKid.name] || [];
-  const allDone   = chores.every(c => c.done);
-  const banner    = document.getElementById('all-done-banner');
-  const msg       = document.getElementById('all-done-msg');
-  const link      = document.getElementById('notify-link');
+  if (!currentKid) return;
+  const chores  = state.assignments[currentKid.name] || [];
+  const allDone = chores.length > 0 && chores.every(c => c.done);
+  const banner  = document.getElementById('all-done-banner');
+  const msg     = document.getElementById('all-done-msg');
+  const link    = document.getElementById('notify-link');
 
   if (!allDone) { banner.style.display = 'none'; return; }
 
   banner.style.display = 'block';
   msg.textContent = `${currentKid.name} finished all ${chores.length} chores today! 🙌`;
 
-  const d = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const d         = new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
   const choreLines = chores.map(c => `• ${c.e} ${c.t}`).join('\n');
-  const subject = encodeURIComponent(`✅ ${currentKid.name} finished their chores!`);
-  const body = encodeURIComponent(
-    `Hi!\n\n${currentKid.name} completed all their chores on ${d}:\n\n${choreLines}\n\nGreat job! 🎉`
-  );
+  const subject   = encodeURIComponent(`✅ ${currentKid.name} finished their chores!`);
+  const body      = encodeURIComponent(`Hi!\n\n${currentKid.name} completed all their chores on ${d}:\n\n${choreLines}\n\nGreat job! 🎉`);
   link.href = `mailto:${cfg.parentEmail || ''}?subject=${subject}&body=${body}`;
 
   spawnConfetti(document.getElementById('reveal-box'), 14);
 }
 
-// Bonus chore done → show separate bonus banner
 function checkBonusDone(wb, cfg) {
+  if (!currentKid) return;
   const bonusBanner = document.getElementById('bonus-done-banner');
   const bonusLink   = document.getElementById('bonus-notify-link');
   if (!bonusBanner) return;
@@ -1074,19 +1197,16 @@ function checkBonusDone(wb, cfg) {
   if (!bonus || !bonus.done) { bonusBanner.style.display = 'none'; return; }
 
   bonusBanner.style.display = 'block';
-
   const subject = encodeURIComponent(`⭐ ${currentKid.name} completed their bonus chore!`);
-  const body = encodeURIComponent(
-    `Hi!\n\n${currentKid.name} completed their bonus chore this week:\n\n• ${bonus.e} ${bonus.t}\n\nAwesome work! 🌟`
-  );
+  const body    = encodeURIComponent(`Hi!\n\n${currentKid.name} completed their bonus chore this week:\n\n• ${bonus.e} ${bonus.t}\n\nAwesome work! 🌟`);
   bonusLink.href = `mailto:${cfg.parentEmail || ''}?subject=${subject}&body=${body}`;
 }
 
 // ─────────────────────────────────────────────────────────────────
 // SPIN / REVEAL ANIMATION
 // ─────────────────────────────────────────────────────────────────
-
 function doReveal() {
+  if (!currentKid) return;
   const cfg   = getConfig();
   const state = getState();
   if (state.revealed[currentKid.name]) return;
@@ -1102,8 +1222,8 @@ function doReveal() {
   revealBox.classList.add('is-spinning');
   choreLst.style.display = 'none';
 
-  const pool = ['🧹','🚿','🛏️','💩','🐕','🧽','🪟','🗑️','💡','🌿','🍽️','🧻','🛋️','🎲','⭐','💵'];
-  let count = 0;
+  const pool  = ['🧹','🚿','🛏️','💩','🐕','🧽','🪟','🗑️','💡','🌿','🍽️','🧻','🛋️','🎲','⭐','💵'];
+  let count   = 0;
   const total = Math.floor(SPIN_MS / 130);
 
   const cycle = setInterval(() => {
@@ -1114,10 +1234,10 @@ function doReveal() {
     if (count >= total) {
       clearInterval(cycle);
       state.revealed[currentKid.name] = true;
-      saveState(state);
+      saveState(state); // async fire-and-forget
 
+      const wb    = getWeekBonus();
       const chores = state.assignments[currentKid.name] || [];
-      const wb     = getWeekBonus();
       const bonus  = wb?.bonuses?.[currentKid.name] || null;
 
       revealBox.classList.remove('is-spinning');
@@ -1125,9 +1245,7 @@ function doReveal() {
       slotEmoji.textContent = currentKid.avatar;
       slotText.textContent  = '';
 
-      const slotBadge = document.getElementById('slot-badge');
-      slotBadge.style.display = bonus ? 'inline-block' : 'none';
-
+      document.getElementById('slot-badge').style.display = bonus ? 'inline-block' : 'none';
       buildChoreList(chores, bonus);
       choreLst.style.display = 'block';
       spawnConfetti(revealBox, bonus ? 22 : 12);
@@ -1137,7 +1255,7 @@ function doReveal() {
       checkBonusDone(wb, cfg);
       spinBtn.disabled    = true;
       spinBtn.textContent = '✅ Chores revealed!';
-      showToast(bonus ? `⭐ ${currentKid.name} has a bonus chore this week!` : `🎉 ${currentKid.name}'s chores are set!`, 2800);
+      showToast(bonus ? `⭐ ${currentKid.name} has a bonus this week!` : `🎉 ${currentKid.name}'s chores are set!`, 2800);
     }
   }, 130);
 }
@@ -1145,7 +1263,6 @@ function doReveal() {
 // ─────────────────────────────────────────────────────────────────
 // CONFETTI
 // ─────────────────────────────────────────────────────────────────
-
 function spawnConfetti(container, count) {
   const colors = ['#6C63FF','#3ECFCF','#FFD700','#FF6B6B','#A8E6CF'];
   for (let i = 0; i < count; i++) {
@@ -1153,35 +1270,35 @@ function spawnConfetti(container, count) {
     p.className = 'confetti-piece';
     p.style.cssText = `left:${20+Math.random()*60}%;top:${5+Math.random()*30}%;background:${colors[~~(Math.random()*colors.length)]};animation-delay:${Math.random()*.4}s;animation-duration:${.6+Math.random()*.4}s`;
     container.appendChild(p);
-    p.addEventListener('animationend', ()=>p.remove());
+    p.addEventListener('animationend', () => p.remove(), { once: true });
   }
 }
 
 // ─────────────────────────────────────────────────────────────────
 // PARENT PIN
 // ─────────────────────────────────────────────────────────────────
-
 function goParentLogin() {
-  ['p0','p1','p2','p3'].forEach(id => { document.getElementById(id).value=''; });
-  screenStack = ['screen-welcome','screen-pin'];
+  ['p0','p1','p2','p3'].forEach(id => { document.getElementById(id).value = ''; });
+  screenStack = ['screen-welcome', 'screen-pin'];
   showScreen('screen-pin');
-  setTimeout(()=>document.getElementById('p0').focus(), 100);
+  setTimeout(() => document.getElementById('p0').focus(), 100);
 }
 function pinNext(idx) {
   const val = document.getElementById(`p${idx}`).value;
-  if (val.length===1 && idx<3) document.getElementById(`p${idx+1}`).focus();
-  if (idx===3 && val.length===1) checkPin();
+  if (val.length === 1 && idx < 3) document.getElementById(`p${idx+1}`).focus();
+  if (idx === 3 && val.length === 1) checkPin();
 }
 function checkPin() {
-  const entered = ['p0','p1','p2','p3'].map(id=>document.getElementById(id).value).join('');
+  const entered = ['p0','p1','p2','p3'].map(id => document.getElementById(id).value).join('');
   const stored  = getConfig().pin || '1234';
-  if (entered===stored) {
+  if (entered === stored) {
     screenStack.push('screen-parent');
+    _moveTarget = null;
     renderParentPanel();
     showScreen('screen-parent');
   } else {
     showToast('❌ Wrong PIN');
-    ['p0','p1','p2','p3'].forEach(id=>{ document.getElementById(id).value=''; });
+    ['p0','p1','p2','p3'].forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('p0').focus();
   }
 }
@@ -1189,36 +1306,35 @@ function checkPin() {
 // ─────────────────────────────────────────────────────────────────
 // PARENT PANEL
 // ─────────────────────────────────────────────────────────────────
-
 function renderParentPanel(tab) {
-  const tabs = ['📋 Chores', '⭐ Bonus', '📧 Notify', '☁️ Sync', '🔑 PIN'];
+  const tabs = ['📋 Chores', '📅 Today', '⭐ Bonus', '📧 Notify', '☁️ Sync', '🔑 PIN'];
   if (!tab) tab = activeTab || tabs[0];
   activeTab = tab;
 
   document.getElementById('parent-tabs').innerHTML = tabs.map(t =>
-    `<button class="tab-btn ${t===tab?'active':''}" onclick="renderParentPanel('${t}')">${t}</button>`
+    `<button class="tab-btn ${t === tab ? 'active' : ''}" onclick="renderParentPanel('${t}')">${t}</button>`
   ).join('');
 
   const editor = document.getElementById('parent-editor');
-  if      (tab==='📋 Chores') renderChoreEditor(editor);
-  else if (tab==='⭐ Bonus')  renderBonusEditor(editor);
-  else if (tab==='📧 Notify') renderNotifyEditor(editor);
-  else if (tab==='☁️ Sync')   renderSyncEditor(editor);
-  else                        renderPinEditor(editor);
+  if      (tab === '📋 Chores') renderChoreEditor(editor);
+  else if (tab === '📅 Today')  renderTodayEditor(editor);
+  else if (tab === '⭐ Bonus')  renderBonusEditor(editor);
+  else if (tab === '📧 Notify') renderNotifyEditor(editor);
+  else if (tab === '☁️ Sync')   renderSyncEditor(editor);
+  else                          renderPinEditor(editor);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // CHORE EDITOR
-// Each chore has: emoji, name, schedule (fixed|random), days[] or frequency
 // ─────────────────────────────────────────────────────────────────
-
 function renderChoreEditor(editor) {
   const cfg = getConfig();
   let html = `
     <div class="info-box">
       <strong>${cfg.chores.length} chores</strong> in the pool.
-      <strong>Fixed</strong> chores always appear on set days.
-      <strong>Random</strong> chores appear a set number of days per week.
+      <strong>Fixed</strong>: always on set days.
+      <strong>Random</strong>: appears exactly N days/week (seeded).
+      <strong>Once/week</strong> (green): that kid must get this chore at least once this week.
     </div>
     <div id="chore-editor-list">`;
 
@@ -1226,10 +1342,10 @@ function renderChoreEditor(editor) {
     const isFixed = c.schedule === 'fixed';
     const freq    = c.frequency || 1;
 
-    // Day pills for fixed
-    const dayPills = DAYS_SHORT.map((d, di) =>
-      `<span class="day-pill ${(c.days||[]).includes(di)?'active':''}"
-             onclick="toggleChorDay(${i},${di})">${d}</span>`
+    // Sunday (di=0) is excluded — week is Mon–Sat only
+    const dayPills = DAYS_SHORT.map((d, di) => di === 0 ? '' :
+      `<span class="day-pill ${(c.days||[]).includes(di) ? 'active' : ''}"
+             onclick="toggleChoreDay(${i},${di})">${d}</span>`
     ).join('');
 
     html += `
@@ -1239,17 +1355,14 @@ function renderChoreEditor(editor) {
         <span class="chore-row-name">${c.t}</span>
         <button class="chore-row-del" onclick="deleteChore(${i})">✕</button>
       </div>
-      <!-- Schedule type toggle -->
       <div class="sched-toggle">
-        <div class="sched-opt ${isFixed?'active':''}"  onclick="setChoreSchedule(${i},'fixed')">📅 Fixed Days</div>
-        <div class="sched-opt ${!isFixed?'active':''}" onclick="setChoreSchedule(${i},'random')">🎲 Random</div>
+        <div class="sched-opt ${isFixed ? 'active' : ''}"  onclick="setChoreSchedule(${i},'fixed')">📅 Fixed Days</div>
+        <div class="sched-opt ${!isFixed ? 'active' : ''}" onclick="setChoreSchedule(${i},'random')">🎲 Random</div>
       </div>
-      <!-- Fixed: day picker -->
-      <div id="fixed-opts-${i}" style="display:${isFixed?'block':'none'}">
+      <div id="fixed-opts-${i}" style="display:${isFixed ? 'block' : 'none'}">
         <div class="day-picker">${dayPills}</div>
       </div>
-      <!-- Random: frequency stepper -->
-      <div id="rand-opts-${i}" class="freq-row" style="display:${!isFixed?'flex':'none'}">
+      <div id="rand-opts-${i}" class="freq-row" style="display:${!isFixed ? 'flex' : 'none'}">
         <label>Days/week:</label>
         <div class="freq-stepper">
           <button class="freq-btn" onclick="changeFreq(${i},-1)">−</button>
@@ -1257,18 +1370,22 @@ function renderChoreEditor(editor) {
           <button class="freq-btn" onclick="changeFreq(${i},+1)">+</button>
         </div>
       </div>
-      <!-- Eligible kids -->
       <div class="eligible-row">
-        <label>Who:</label>
+        <label>Who can:</label>
         ${cfg.kids.map(kid => {
-          const active = !c.eligible || c.eligible.length === 0 || c.eligible.includes(kid.name);
-          return `<span class="kid-pill ${active?'active':''}"
-                       onclick="toggleEligible(${i},'${kid.name}')">${kid.avatar} ${kid.name}</span>`;
+          const on = !c.eligible || c.eligible.length === 0 || c.eligible.includes(kid.name);
+          return `<span class="kid-pill ${on ? 'active' : ''}" onclick="toggleEligible(${i},'${kid.name}')">${kid.avatar} ${kid.name}</span>`;
         }).join('')}
       </div>
-      <!-- Shared flag -->
+      <div class="eligible-row">
+        <label>Once/week:</label>
+        ${cfg.kids.map(kid => {
+          const req = (c.weeklyRequired||[]).includes(kid.name);
+          return `<span class="kid-pill ${req ? 'green-active' : ''}" onclick="toggleWeeklyRequired(${i},'${kid.name}')">${kid.avatar} ${kid.name}</span>`;
+        }).join('')}
+      </div>
       <label class="shared-toggle">
-        <input type="checkbox" ${c.shared?'checked':''} onchange="toggleShared(${i},this.checked)"/>
+        <input type="checkbox" ${c.shared ? 'checked' : ''} onchange="toggleShared(${i},this.checked)"/>
         Multiple kids can share this chore on the same day
       </label>
     </div>`;
@@ -1287,22 +1404,32 @@ function renderChoreEditor(editor) {
 }
 
 async function toggleEligible(choreIdx, kidName) {
-  const cfg  = getConfig();
-  const c    = cfg.chores[choreIdx];
-  // If no eligible list (= all kids), expand to all kids first, then remove
-  if (!c.eligible || c.eligible.length === 0) {
-    c.eligible = cfg.kids.map(k => k.name);
-  }
+  const cfg = getConfig();
+  const c   = cfg.chores[choreIdx];
+  if (!c.eligible || c.eligible.length === 0) c.eligible = cfg.kids.map(k => k.name);
   const pos = c.eligible.indexOf(kidName);
   if (pos >= 0) {
     c.eligible.splice(pos, 1);
-    // If nobody left, keep at least one — don't allow zero eligible
-    if (c.eligible.length === 0) c.eligible = cfg.kids.map(k => k.name);
+    if (c.eligible.length === 0) c.eligible = cfg.kids.map(k => k.name); // keep at least one
   } else {
     c.eligible.push(kidName);
-    // If all kids selected, simplify back to empty (= all)
-    if (c.eligible.length === cfg.kids.length) c.eligible = [];
+    if (c.eligible.length === cfg.kids.length) c.eligible = []; // all selected = simplify to empty
   }
+  // Also remove from weeklyRequired if kid is no longer eligible
+  if (c.weeklyRequired && c.eligible.length > 0) {
+    c.weeklyRequired = c.weeklyRequired.filter(n => c.eligible.includes(n));
+  }
+  await saveConfig(cfg);
+  renderParentPanel(activeTab);
+}
+
+async function toggleWeeklyRequired(choreIdx, kidName) {
+  const cfg = getConfig();
+  const c   = cfg.chores[choreIdx];
+  if (!Array.isArray(c.weeklyRequired)) c.weeklyRequired = [];
+  const pos = c.weeklyRequired.indexOf(kidName);
+  if (pos >= 0) c.weeklyRequired.splice(pos, 1);
+  else          c.weeklyRequired.push(kidName);
   await saveConfig(cfg);
   renderParentPanel(activeTab);
 }
@@ -1311,32 +1438,31 @@ async function toggleShared(choreIdx, checked) {
   const cfg = getConfig();
   cfg.chores[choreIdx].shared = checked;
   await saveConfig(cfg);
-  // No full re-render needed — checkbox state is already updated in DOM
 }
 
-function setChoreSchedule(idx, type) {
+async function setChoreSchedule(idx, type) {
   const cfg = getConfig();
   cfg.chores[idx].schedule = type;
   if (type === 'fixed' && !cfg.chores[idx].days) cfg.chores[idx].days = [];
-  saveConfig(cfg);
+  await saveConfig(cfg);
   renderParentPanel(activeTab);
 }
 
-function toggleChorDay(choreIdx, dayIdx) {
+async function toggleChoreDay(choreIdx, dayIdx) {
   const cfg  = getConfig();
   const days = cfg.chores[choreIdx].days || [];
   const pos  = days.indexOf(dayIdx);
   if (pos >= 0) days.splice(pos, 1); else days.push(dayIdx);
   cfg.chores[choreIdx].days = days;
-  saveConfig(cfg);
+  await saveConfig(cfg);
   renderParentPanel(activeTab);
 }
 
-function changeFreq(choreIdx, delta) {
+async function changeFreq(choreIdx, delta) {
   const cfg = getConfig();
   const cur = cfg.chores[choreIdx].frequency || 1;
-  cfg.chores[choreIdx].frequency = Math.min(Math.max(cur + delta, 1), 7);
-  saveConfig(cfg);
+  cfg.chores[choreIdx].frequency = Math.min(Math.max(cur + delta, 1), 6); // max 6 (Mon–Sat)
+  await saveConfig(cfg);
   const el = document.getElementById(`freq-val-${choreIdx}`);
   if (el) el.textContent = cfg.chores[choreIdx].frequency;
 }
@@ -1348,7 +1474,7 @@ function addChore() {
   const t   = tEl.value.trim();
   if (!t) { showToast('Enter a chore name!'); return; }
   const cfg = getConfig();
-  cfg.chores.push({e, t, schedule:'random', frequency:2});
+  cfg.chores.push({ e, t, schedule:'random', frequency:2, weeklyRequired:[] });
   saveConfig(cfg);
   eEl.value = ''; tEl.value = '';
   renderParentPanel(activeTab);
@@ -1357,34 +1483,165 @@ function addChore() {
 
 async function deleteChore(i) {
   if (!confirm('Remove this chore?')) return;
-  const cfg = getConfig();
-  const name = cfg.chores[i].t; // save name before removal
+  const cfg  = getConfig();
+  const name = cfg.chores[i].t;
   cfg.chores.splice(i, 1);
   if (!cfg.deletedChores) cfg.deletedChores = [];
-  cfg.deletedChores.push(name); // prevent migration from re-adding it
+  cfg.deletedChores.push(name);
   await saveConfig(cfg);
   renderParentPanel(activeTab);
   showToast('Chore removed');
 }
 
-function rerollDay() {
+async function rerollDay() {
   if (!confirm('Re-roll all assignments for today?')) return;
   const cfg   = getConfig();
   const fresh = generateDayState(cfg);
-  saveState(fresh);
+  await saveState(fresh);
   showToast('🎲 New assignments rolled!');
   renderParentPanel(activeTab);
 }
 
 // ─────────────────────────────────────────────────────────────────
+// TODAY ADMIN TAB — reassign individual chores
+// ─────────────────────────────────────────────────────────────────
+let _moveTarget = null; // { kidName, choreIdx } — open move-picker
+
+function renderTodayEditor(editor) {
+  const cfg   = getConfig();
+  const state = getState();
+  let html = `
+    <div class="info-box">
+      <strong>Override today's assignments.</strong> Move a chore to another kid, remove one from a kid's list,
+      or add any chore to a kid for today only. Changes don't affect tomorrow's schedule.
+    </div>`;
+
+  cfg.kids.forEach(kid => {
+    const chores     = state.assignments[kid.name] || [];
+    const isRevealed = state.revealed[kid.name];
+
+    html += `
+      <div class="today-kid-section">
+        <div class="today-kid-header">
+          <span>${kid.avatar} ${kid.name} <span style="font-weight:600;color:#999">(${chores.filter(c=>c.done).length}/${chores.length} done)</span></span>
+          <span style="font-size:.72rem;color:${isRevealed?'#2ab87a':'#bbb'};font-weight:700">${isRevealed ? '✅ Revealed' : '🔒 Hidden'}</span>
+        </div>`;
+
+    if (!chores.length) {
+      html += `<p style="color:#bbb;font-size:.8rem;padding:4px 2px">No chores assigned today.</p>`;
+    } else {
+      chores.forEach((c, ci) => {
+        const isMoving = _moveTarget && _moveTarget.kidName === kid.name && _moveTarget.choreIdx === ci;
+        html += `
+          <div class="today-chore-row">
+            <div class="today-chore-main">
+              <span style="font-size:1.1rem;flex-shrink:0">${c.e}</span>
+              <span class="today-chore-name${c.done ? ' is-done' : ''}">${c.t}</span>
+              <button class="today-mini-btn" onclick="toggleMoveTarget('${kid.name}',${ci})">${isMoving ? '✕ Cancel' : '⇄ Move'}</button>
+              <button class="today-mini-btn danger" onclick="adminRemoveChore('${kid.name}',${ci})">✕</button>
+            </div>`;
+
+        if (isMoving) {
+          const otherKids = cfg.kids.filter(k => k.name !== kid.name);
+          html += `<div class="move-picker"><span>Move to →</span>`;
+          otherKids.forEach(ok => {
+            html += `<button class="move-target-btn" onclick="adminMoveChore('${kid.name}',${ci},'${ok.name}')">${ok.avatar} ${ok.name}</button>`;
+          });
+          html += `</div>`;
+        }
+        html += `</div>`;
+      });
+    }
+
+    // Add-chore selector
+    const alreadyHas = new Set(chores.map(c => c.t));
+    html += `
+      <div class="add-today-row">
+        <select class="add-today-select" id="add-today-sel-${kid.name}">
+          <option value="">— Add a chore today —</option>
+          ${cfg.chores.filter(c => !alreadyHas.has(c.t)).map((c, ci2) => {
+            // find real index in cfg.chores
+            const realIdx = cfg.chores.indexOf(c);
+            return `<option value="${realIdx}">${c.e} ${c.t}</option>`;
+          }).join('')}
+        </select>
+        <button class="today-mini-btn" onclick="adminAddChore('${kid.name}')">+ Add</button>
+      </div>
+    </div>`;
+  });
+
+  html += `<button class="btn btn-danger" style="margin-top:14px" onclick="rerollDay()">🎲 Re-roll All Assignments</button>`;
+  editor.innerHTML = html;
+}
+
+function toggleMoveTarget(kidName, choreIdx) {
+  if (_moveTarget && _moveTarget.kidName === kidName && _moveTarget.choreIdx === choreIdx) {
+    _moveTarget = null;
+  } else {
+    _moveTarget = { kidName, choreIdx };
+  }
+  renderParentPanel(activeTab);
+}
+
+async function adminMoveChore(fromKid, fromIdx, toKid) {
+  const state = getState();
+  const list  = state.assignments[fromKid];
+  if (!list || fromIdx >= list.length) return;
+
+  const chore = list[fromIdx];
+  // Remove from source kid
+  list.splice(fromIdx, 1);
+  // Add to target kid if not already there
+  if (!state.assignments[toKid]) state.assignments[toKid] = [];
+  if (!state.assignments[toKid].find(c => c.t === chore.t)) {
+    state.assignments[toKid].push({ e: chore.e, t: chore.t, done: false });
+  }
+  _moveTarget = null;
+  await saveState(state);
+  renderParentPanel(activeTab);
+  showToast(`Moved "${chore.t}" → ${toKid}`);
+}
+
+async function adminRemoveChore(kidName, choreIdx) {
+  const state = getState();
+  const list  = state.assignments[kidName];
+  if (!list || choreIdx >= list.length) return;
+  const name = list[choreIdx].t;
+  if (!confirm(`Remove "${name}" from ${kidName} today?`)) return;
+  list.splice(choreIdx, 1);
+  await saveState(state);
+  renderParentPanel(activeTab);
+  showToast(`Removed from ${kidName}`);
+}
+
+async function adminAddChore(kidName) {
+  const sel = document.getElementById(`add-today-sel-${kidName}`);
+  if (!sel || !sel.value) { showToast('Pick a chore first'); return; }
+  const choreIdx = parseInt(sel.value, 10);
+  const cfg      = getConfig();
+  const choreDef = cfg.chores[choreIdx];
+  if (!choreDef) return;
+
+  const state = getState();
+  if (!state.assignments[kidName]) state.assignments[kidName] = [];
+  if (state.assignments[kidName].find(c => c.t === choreDef.t)) {
+    showToast('Already on their list!'); return;
+  }
+  state.assignments[kidName].push({ e: choreDef.e, t: choreDef.t, done: false });
+  await saveState(state);
+  renderParentPanel(activeTab);
+  showToast(`Added "${choreDef.t}" to ${kidName}`);
+}
+
+// ─────────────────────────────────────────────────────────────────
 // BONUS EDITOR
 // ─────────────────────────────────────────────────────────────────
-
 function renderBonusEditor(editor) {
   const cfg = getConfig();
   let html = `
     <div class="info-box">
-      Every <strong>Monday</strong>, each kid automatically gets one bonus reward from this pool.
+      Every <strong>Monday</strong> (Mon–Fri visible), each kid gets one bonus reward from this pool.
+      Rewards rotate — no repeats until all have been given out.
     </div>
     <p class="section-label">Bonus Reward Pool</p>`;
 
@@ -1414,9 +1671,9 @@ function addBonus() {
   const t   = tEl.value.trim();
   if (!t) { showToast('Enter a reward name!'); return; }
   const cfg = getConfig();
-  cfg.bonus.push({e, t});
+  cfg.bonus.push({ e, t });
   saveConfig(cfg);
-  eEl.value=''; tEl.value='';
+  eEl.value = ''; tEl.value = '';
   renderParentPanel(activeTab);
   showToast(`Added: ${t}`);
 }
@@ -1433,14 +1690,13 @@ function deleteBonus(i) {
 // ─────────────────────────────────────────────────────────────────
 // NOTIFY EDITOR
 // ─────────────────────────────────────────────────────────────────
-
 function renderNotifyEditor(editor) {
   const cfg = getConfig();
   editor.innerHTML = `
     <div class="info-box">
       When a kid checks off all their chores, a <strong>"Notify Parents"</strong> button appears.
-      Tapping it opens your phone's email app with a pre-filled message ready to send.
-      Enter one or both parent emails below (separate with a comma).
+      Tapping it opens your email app with a pre-filled message.
+      Separate multiple addresses with a comma.
     </div>
     <label style="font-size:.82rem;font-weight:700;color:#555">Parent Email(s)</label>
     <input class="email-input" type="email" id="parent-email"
@@ -1449,20 +1705,19 @@ function renderNotifyEditor(editor) {
     <button class="btn btn-primary" style="margin-top:12px" onclick="saveEmail()">Save Email</button>`;
 }
 
-function saveEmail() {
+async function saveEmail() {
   const val = document.getElementById('parent-email').value.trim();
   const cfg = getConfig();
   cfg.parentEmail = val;
-  saveConfig(cfg);
+  await saveConfig(cfg);
   showToast('✅ Email saved!');
 }
 
 // ─────────────────────────────────────────────────────────────────
 // SYNC EDITOR
 // ─────────────────────────────────────────────────────────────────
-
 function renderSyncEditor(editor) {
-  const sync = getSyncConfig();
+  const sync        = getSyncConfig();
   const isConnected = !!(sync.binId && sync.apiKey);
 
   if (isConnected) {
@@ -1472,7 +1727,8 @@ function renderSyncEditor(editor) {
         Bin ID: <code style="font-size:.72rem;word-break:break-all">${sync.binId}</code>
       </div>
       <div class="info-box" style="margin-top:0">
-        ⚠️ <strong>Every device needs setup.</strong> Each phone must enter the same Master Key in this tab. The credentials are never stored in the cloud — only your chore data is.
+        ⚠️ <strong>Every device needs setup.</strong> Each phone must enter the same Master Key.
+        Credentials are stored locally only — your chore data goes to the cloud.
       </div>
       <button class="btn btn-primary" id="test-sync-btn" onclick="testSync()">🧪 Test Connection</button>
       <button class="btn btn-secondary" onclick="forcePull()" style="margin-top:8px">🔄 Force Pull from Cloud</button>
@@ -1483,9 +1739,8 @@ function renderSyncEditor(editor) {
       <div class="info-box">
         <strong>Set up cross-device sync (free, ~2 minutes):</strong><br><br>
         1. Go to <strong>jsonbin.io</strong> → create a free account.<br>
-        2. Go to <strong>API Keys</strong> in your account menu → copy your <strong>Master Key</strong>.<br>
-        3. Paste it below → tap <strong>Create & Connect</strong>.<br>
-        The app creates the bin for you — no other steps needed.
+        2. Go to <strong>API Keys</strong> in your account → copy your <strong>Master Key</strong>.<br>
+        3. Paste it below → tap <strong>Create & Connect</strong>.
       </div>
       <label style="font-size:.82rem;font-weight:700;color:#555">Master Key</label>
       <input class="email-input" id="sync-api-key" type="password" placeholder="$2a$10$…"/>
@@ -1523,8 +1778,8 @@ async function createAndConnect() {
       headers: {
         'Content-Type': 'application/json',
         'X-Master-Key': apiKey,
-        'X-Bin-Name': 'ChoreTime',
-        'X-Private': 'true',
+        'X-Bin-Name':   'ChoreTime',
+        'X-Private':    'true',
       },
       body: JSON.stringify(buildSyncPayload()),
     });
@@ -1538,7 +1793,7 @@ async function createAndConnect() {
 
     const data  = await res.json();
     const binId = data.metadata?.id;
-    if (!binId) throw new Error('No bin ID');
+    if (!binId) throw new Error('No bin ID returned');
 
     saveSyncConfig({ binId, apiKey });
     showSyncBadge('ok');
@@ -1568,19 +1823,17 @@ async function testSync() {
 
   const sync = getSyncConfig();
   if (!sync.binId || !sync.apiKey) {
-    if (res) res.innerHTML = '<span style="color:#e05555">❌ No credentials found. Please reconnect.</span>';
+    if (res) res.innerHTML = '<span style="color:#e05555">❌ No credentials. Please reconnect.</span>';
     if (btn) { btn.disabled = false; btn.textContent = '🧪 Test Connection'; }
     return;
   }
 
-  // Test push
   const pushOk = await pushRemote();
 
-  // Test pull
   let pullOk = false;
   try {
     const r = await fetch(`https://api.jsonbin.io/v3/b/${sync.binId}/latest`, {
-      cache: 'no-store',
+      cache:   'no-store',
       headers: { 'X-Master-Key': sync.apiKey },
     });
     pullOk = r.ok;
@@ -1588,8 +1841,8 @@ async function testSync() {
 
   if (res) {
     res.innerHTML = `
-      ${pushOk ? '✅' : '❌'} <strong>Push (write):</strong> ${pushOk ? 'Working' : 'FAILED — check your Master Key'}<br>
-      ${pullOk ? '✅' : '❌'} <strong>Pull (read):</strong>  ${pullOk ? 'Working' : 'FAILED — check your Bin ID'}<br>
+      ${pushOk ? '✅' : '❌'} <strong>Push (write):</strong> ${pushOk ? 'Working' : 'FAILED — check Master Key'}<br>
+      ${pullOk ? '✅' : '❌'} <strong>Pull (read):</strong>  ${pullOk ? 'Working' : 'FAILED — check Bin ID'}<br>
       ${pushOk && pullOk
         ? '<br><span style="color:#2ab87a;font-weight:700">✅ Sync is fully working!</span>'
         : '<br><span style="color:#e05555;font-weight:700">⚠️ Fix the errors above, then try again.</span>'}`;
@@ -1614,7 +1867,6 @@ function clearSyncSettings() {
 // ─────────────────────────────────────────────────────────────────
 // PIN EDITOR
 // ─────────────────────────────────────────────────────────────────
-
 function renderPinEditor(editor) {
   editor.innerHTML = `
     <p style="color:#888;font-size:.85rem;margin-bottom:14px">Change your 4-digit parent PIN.</p>
@@ -1629,8 +1881,8 @@ async function savePin() {
   const val = document.getElementById('new-pin').value.trim();
   if (!/^\d{4}$/.test(val)) { showToast('PIN must be 4 digits'); return; }
   const cfg = getConfig();
-  cfg.pin = val;
-  await saveConfig(cfg); // syncs to cloud
+  cfg.pin   = val;
+  await saveConfig(cfg);
   document.getElementById('new-pin').value = '';
   showToast('✅ PIN updated & synced!');
 }
@@ -1638,21 +1890,18 @@ async function savePin() {
 // ─────────────────────────────────────────────────────────────────
 // TOAST
 // ─────────────────────────────────────────────────────────────────
-
 let toastTimer;
-function showToast(msg, dur=2500) {
+function showToast(msg, dur = 2500) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>el.classList.remove('show'), dur);
+  toastTimer = setTimeout(() => el.classList.remove('show'), dur);
 }
 
 // ─────────────────────────────────────────────────────────────────
-// BOOT — pull latest from cloud first, then render
+// MANUAL REFRESH
 // ─────────────────────────────────────────────────────────────────
-
-// Manual refresh — tap the sync badge or the Refresh button
 async function manualRefresh() {
   const btn = document.getElementById('refresh-btn');
   if (btn) { btn.disabled = true; btn.textContent = '🔄 Refreshing…'; }
@@ -1665,20 +1914,22 @@ async function manualRefresh() {
   showToast('✅ Refreshed!', 1500);
 }
 
+// ─────────────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────────────
 (async () => {
-  // Initial load
   await pullFromRemote();
   renderWelcome();
 
-  // Auto-sync when the user switches back to the app (tab/PWA comes into focus)
+  // Re-sync when app comes back into focus
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') manualRefresh();
   });
 
-  // Also poll every 45 seconds in case the app stays open on a device
+  // Poll every 45 seconds while app is open
   setInterval(() => {
     if (document.visibilityState === 'visible') manualRefresh();
-  }, 45_000);
+  }, 45000);
 })();
 </script>
 </body>
